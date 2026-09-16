@@ -1,0 +1,6 @@
+interface:
+  display_name: Software Craft
+  short_description: Cross-language repository engineering when no narrower skill applies
+  default_prompt: Use $software-craft for cross-language repository engineering when no narrower skill applies.
+policy:
+  allow_implicit_invocation: true

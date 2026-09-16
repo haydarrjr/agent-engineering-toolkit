@@ -1,0 +1,6 @@
+interface:
+  display_name: ReThinking
+  short_description: Explicit audit and repair of agent instruction surfaces against current OpenAI guidance
+  default_prompt: Use $rethinking to audit and repair AGENTS.md, skills, references, prompts, and agent configuration against current official OpenAI guidance.
+policy:
+  allow_implicit_invocation: false

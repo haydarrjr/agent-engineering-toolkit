@@ -1,0 +1,6 @@
+interface:
+  display_name: MARGOS
+  short_description: Explicit coordination, delegation, host-capability, and effect-boundary decisions
+  default_prompt: Use $margos to decide work ownership, optional delegation, and external-effect boundaries.
+policy:
+  allow_implicit_invocation: false
