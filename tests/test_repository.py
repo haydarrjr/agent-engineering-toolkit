@@ -26,10 +26,13 @@ class RepositoryContract(unittest.TestCase):
         b=json.loads((ROOT/'.agents/plugins/marketplace.json').read_text())
         self.assertEqual(a,b)
 
-    def test_codex_keywords_match_portable_manifest(self):
+    def test_codex_keywords_owned_by_portable_manifest(self):
         portable=json.loads((ROOT/'plugin.json').read_text())
         codex=json.loads((ROOT/'.codex-plugin/plugin.json').read_text())
-        self.assertEqual(codex['keywords'],portable['keywords'])
+        self.assertIn('keywords',portable)
+        self.assertNotIn('keywords',codex)
+        self.assertIn('code-review',portable['keywords'])
+        self.assertIn('debugging',portable['keywords'])
 
     def test_provenance_is_immutable(self):
         p=json.loads((ROOT/'provenance/imports.json').read_text())
