@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Repository contract
+        run: python scripts/validate_repository.py
+      - name: Unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Python harness self-test
+        run: python skills/python-engineering-harness/scripts/self_test.py
+      - name: Agent Plugin validation
+        run: python skills/agent-plugins-author/scripts/validate_agent_plugin.py .
+      - name: Skill design validation
+        run: python skills/agent-plugins-author/scripts/validate_skill_design.py .
+      - name: Marketplace drift
+        run: python skills/agent-plugins-author/scripts/render_marketplace.py . --check
+      - name: Surface reconciliation
+        run: python skills/agent-plugins-author/scripts/reconcile_surfaces.py .
+      - name: Reproducible release
+        run: python scripts/build_release.py --check-reproducible
