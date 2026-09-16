@@ -1,0 +1,6 @@
+interface:
+  display_name: Agent Plugins Author
+  short_description: Explicit Agent Plugins authoring, audit, portability, validation, and packaging
+  default_prompt: Use $agent-plugins-author to create, audit, package, or reconcile a portable Agent Plugin and its client compatibility surfaces.
+policy:
+  allow_implicit_invocation: false
