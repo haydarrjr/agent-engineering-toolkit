@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+title: Agent Engineering Toolkit
+message: "If this toolkit supports your research or engineering workflow, please cite the repository and release used."
+type: software
+authors:
+  - family-names: Türkan
+    given-names: Önder
+repository-code: "https://github.com/haydarrjr/agent-engineering-toolkit"
+license: Apache-2.0
+version: 1.0.0
+date-released: 2026-09-17

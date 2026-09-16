@@ -1,0 +1,48 @@
+{
+  "schema": "aet.provenance.imports.v1",
+  "generated_for_release": "1.0.0",
+  "imports": [
+    {
+      "source": "haydarrjr/engineering-agent-toolkit",
+      "visibility_at_import": "private",
+      "commit": "d8f9f93171debac5f19347fc1a6af40738b6ceab",
+      "treatment": "transformed-and-relicensed-by-copyright-holder",
+      "areas": [
+        "software-craft",
+        "python-engineering-harness",
+        "margos",
+        "rethinking",
+        "routing concepts"
+      ],
+      "history_imported": false,
+      "notes": "Public repository uses a clean lineage and excludes private repository history and private operational state."
+    },
+    {
+      "source": "haydarrjr/agent-plugins-author",
+      "visibility_at_import": "public",
+      "commit": "38d11295a7701ea8e11ab4d2da3779b0207318c4",
+      "source_license": "MIT",
+      "treatment": "adapted-by-copyright-holder",
+      "areas": [
+        "agent-plugins-author",
+        "portable plugin validation",
+        "marketplace/release concepts"
+      ],
+      "history_imported": false
+    }
+  ],
+  "external_references": [
+    {
+      "publisher": "OpenAI",
+      "purpose": "current ReThinking guidance",
+      "url": "https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra",
+      "vendored": false
+    },
+    {
+      "publisher": "GitHub",
+      "purpose": "Agent Plugins and Copilot marketplace compatibility",
+      "url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
+      "vendored": false
+    }
+  ]
+}

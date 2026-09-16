@@ -1,0 +1,33 @@
+{
+  "name": "agent-engineering-toolkit",
+  "version": "1.0.0",
+  "description": "Open-source engineering skills for repository work, Python, explicit coordination, ReThinking audits, and Agent Plugins authoring.",
+  "author": {
+    "name": "Önder Türkan"
+  },
+  "homepage": "https://github.com/haydarrjr/agent-engineering-toolkit",
+  "repository": "https://github.com/haydarrjr/agent-engineering-toolkit",
+  "license": "Apache-2.0",
+  "keywords": [
+    "software-engineering",
+    "python",
+    "codex",
+    "agent-skills",
+    "agent-plugins",
+    "open-source-maintenance"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Engineering Toolkit",
+    "shortDescription": "Skills-first engineering toolkit for maintainers and agent-ready repositories.",
+    "longDescription": "Portable engineering skills for cross-language and Python repository work plus explicit coordination, ReThinking instruction audits, and Agent Plugins authoring.",
+    "developerName": "Önder Türkan",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Use $software-craft for cross-language repository engineering when no narrower skill applies.",
+      "Use $python-engineering-harness for Python repository work.",
+      "Use $margos, $rethinking, or $agent-plugins-author only when explicitly requested."
+    ]
+  }
+}

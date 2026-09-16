@@ -1,0 +1,13 @@
+{
+  "schema": "aet.public-metrics.v1",
+  "as_of": null,
+  "repository": "haydarrjr/agent-engineering-toolkit",
+  "stars": null,
+  "forks": null,
+  "external_contributors": null,
+  "external_pull_requests": null,
+  "external_issues": null,
+  "release_downloads": null,
+  "install_metrics": null,
+  "notes": "Populate only from observable public sources; null means not yet recorded."
+}
