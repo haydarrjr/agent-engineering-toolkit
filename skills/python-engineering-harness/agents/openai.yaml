@@ -1,0 +1,6 @@
+interface:
+  display_name: Python Engineering Harness
+  short_description: Python implementation, debugging, tests, packaging, and architecture
+  default_prompt: Use $python-engineering-harness for Python repository work and validate with project-native tools.
+policy:
+  allow_implicit_invocation: true
