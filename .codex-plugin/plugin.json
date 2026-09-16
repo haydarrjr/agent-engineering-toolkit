@@ -8,16 +8,6 @@
   "homepage": "https://github.com/haydarrjr/agent-engineering-toolkit",
   "repository": "https://github.com/haydarrjr/agent-engineering-toolkit",
   "license": "Apache-2.0",
-  "keywords": [
-    "software-engineering",
-    "python",
-    "codex",
-    "agent-skills",
-    "agent-plugins",
-    "code-review",
-    "debugging",
-    "open-source-maintenance"
-  ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Agent Engineering Toolkit",
