@@ -4,16 +4,35 @@
     "name": "Önder Türkan"
   },
   "metadata": {
-    "description": "Open-source engineering skills for repository work, Python, explicit coordination, ReThinking audits, and Agent Plugins authoring.",
-    "version": "1.0.0"
+    "description": "GitHub Copilot marketplace for agent-engineering-toolkit",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "agent-engineering-toolkit",
-      "description": "Open-source engineering skills for repository work, Python, explicit coordination, ReThinking audits, and Agent Plugins authoring.",
-      "version": "1.0.0",
+      "description": "Open-source engineering skills for repository work, Python, host-native MARGOS orchestration, ReThinking audits, and Agent Plugins authoring.",
+      "version": "1.1.0",
       "source": ".",
-      "license": "Apache-2.0"
+      "author": {
+        "name": "Önder Türkan"
+      },
+      "strict": true,
+      "category": "Productivity",
+      "homepage": "https://github.com/haydarrjr/agent-engineering-toolkit",
+      "repository": "https://github.com/haydarrjr/agent-engineering-toolkit",
+      "license": "Apache-2.0",
+      "keywords": [
+        "software-engineering",
+        "python",
+        "codex",
+        "agent-skills",
+        "agent-plugins",
+        "code-review",
+        "debugging",
+        "orchestration",
+        "copilot",
+        "open-source-maintenance"
+      ]
     }
   ]
 }

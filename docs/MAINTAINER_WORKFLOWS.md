@@ -4,7 +4,7 @@ AET is structured around observable OSS maintenance work rather than one-off pro
 
 ## Pull requests
 
-Use Codex or another coding agent for bounded implementation, review assistance, affected-test selection, and release-note drafting. Human maintainers retain merge and release authority.
+Use Codex or another coding agent for bounded implementation, review assistance, affected-test selection, and release-note drafting. MARGOS may route independent obligations to host-native children when the host proves the capability; the root remains responsible for integration and final evidence. Human maintainers retain merge and release authority.
 
 ## Issues
 
@@ -12,7 +12,7 @@ Triage bug reports into reproducible defects, compatibility reports, documentati
 
 ## Releases
 
-Use source validation and reproducible package checks before tagging. Treat host installation and marketplace publication as separate evidence.
+Use source validation, client-surface reconciliation, and reproducible package checks before tagging. Treat host installation, delegated child execution, exact automatic model selection, and marketplace publication as separate evidence.
 
 ## Security
 

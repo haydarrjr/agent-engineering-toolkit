@@ -1,28 +1,28 @@
 ---
 name: margos
-description: "Use only when the user explicitly requests MARGOS coordination, optional delegation, host-capability decisions, or bounded runtime/profile changes."
+description: "Use only when the user explicitly requests MARGOS to coordinate host-native subagents, choose compute tiers, or govern delegation and runtime boundaries."
 ---
 
 # MARGOS
 
-MARGOS is an explicit decision aid for optional computation. It does not replace the host, grant permission, or turn a plan into execution. Prefer the native direct path unless the requested work has an independent obligation that benefits from coordination.
+MARGOS is an explicit, model/provider-agnostic orchestrator for optional computation. Keep the root session as the integration owner, but do not assume the root model should execute every subtask. Use only host-native subagents and model controls that the current client actually exposes; MARGOS never requires an MCP server, daemon, or global model change.
 
-## Decide
+## Orchestrate
 
-1. State the requested outcome and the single owner of each write scope.
-2. Prefer direct work when the task is small, sequential, or already clear.
-3. Consider delegation only for independent work with disjoint scopes and a useful handoff boundary. A host must prove child capability; a profile declaration or model name is not proof.
-4. Keep the root model, permissions, sandbox, connectors, credentials, and user authority unchanged unless explicitly authorized.
-5. Preserve verification, reconciliation, and completion capacity before optional work. Unknown results stop the branch and require reconciliation.
+1. Bind the requested outcome, write ownership, and hard authority boundaries.
+2. Inspect the effective host surface before delegation. Missing subagent or per-child model capability falls back to direct execution; never claim a child or model ran without host evidence.
+3. Choose the smallest sufficient compute class. A bounded read-only research, review, or mapping task may transfer to a cheaper child even when it is the only subtask. Ordinary implementation uses balanced execution. Escalate only when ambiguity, failed verification, conflicting evidence, cross-system impact, or another hard obligation justifies deeper reasoning.
+4. Treat the root model selected in the UI as the parent session, not as a blanket child-model constraint. Obey an explicit user instruction that all work, or a named subtask, must use a specific model/provider.
+5. Keep one compute class for an active subtask. Re-evaluate at a real handoff boundary instead of oscillating models mid-task.
+6. Integrate child results at the root, run the verification needed for the requested outcome, and reconcile unknown external effects before retrying.
 
-## Runtime and external effects
+Load only the reference that owns the current decision:
 
-For a profile/runtime change, inspect effective host state, plan, obtain any required exact authority immediately before mutation, apply only the owned scope, verify the result, and reconcile drift. Never claim a child ran from configuration alone.
+- [decision model](references/decision-model.md) for direct, transfer, delegation, serialization, and ownership choices.
+- [model routing](references/model-routing.md) for compute classes and escalation/de-escalation signals.
+- [Codex host adapter](references/host-codex.md) when Codex native subagents are available.
+- [Copilot/VS Code host adapter](references/host-copilot.md) when GitHub Copilot custom agents or VS Code subagents are available.
+- [host boundaries](references/host-boundaries.md) for capability evidence, explicit model constraints, or profile changes.
+- [external effects](references/external-effects.md) for destructive, production, credentialed, or irreversible mutations.
 
-Load a reference only when the matching decision is material:
-
-- [decision model](references/decision-model.md)
-- [host boundaries](references/host-boundaries.md)
-- [external effects](references/external-effects.md)
-
-MARGOS is never selected implicitly for ordinary engineering work.
+Finish with the requested result, host evidence for delegated work, and unresolved capability or reconciliation state. MARGOS remains explicit-only for ordinary engineering work.

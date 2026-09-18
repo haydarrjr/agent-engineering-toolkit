@@ -1,19 +1,21 @@
 {
   "name": "agent-engineering-toolkit",
-  "owner": {
-    "name": "Önder Türkan"
-  },
-  "metadata": {
-    "description": "Open-source engineering skills for repository work, Python, explicit coordination, ReThinking audits, and Agent Plugins authoring.",
-    "version": "1.0.0"
+  "interface": {
+    "displayName": "Agent Engineering Toolkit"
   },
   "plugins": [
     {
       "name": "agent-engineering-toolkit",
-      "description": "Open-source engineering skills for repository work, Python, explicit coordination, ReThinking audits, and Agent Plugins authoring.",
-      "version": "1.0.0",
-      "source": ".",
-      "license": "Apache-2.0"
+      "source": {
+        "source": "url",
+        "url": "https://github.com/haydarrjr/agent-engineering-toolkit.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

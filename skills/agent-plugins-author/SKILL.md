@@ -33,4 +33,4 @@ Load only the references that match the affected surface:
 
 For implementation work, continue through the requested source change, affected validation, correction of package-caused failures, and reconciliation. Stop only at a real authority, credential, destructive, publication, or unresolved-source boundary.
 
-Useful helpers in this skill include `validate_agent_plugin.py`, `validate_skill_design.py`, `render_marketplace.py`, `reconcile_surfaces.py`, and `build_package.py`.
+Useful helpers in this skill include `validate_agent_plugin.py`, `validate_skill_design.py`, `render_marketplace.py`, `render_copilot_marketplace.py`, `reconcile_surfaces.py`, and `build_package.py`.

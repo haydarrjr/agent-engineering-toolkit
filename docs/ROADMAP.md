@@ -6,6 +6,13 @@
 - Deterministic source validation
 - Reproducible release archive
 
+## 1.1 — Host-native MARGOS orchestration
+- Capability-based compute tiers
+- Evidence-driven escalation and direct fallback
+- Codex native-subagent guidance
+- GitHub Copilot / VS Code leaf-agent adapter
+- Separate deterministic client marketplace surfaces
+
 ## Near term
 - Collect external install reports across compatible hosts
 - Add real-world routing fixtures from community issues
