@@ -48,3 +48,7 @@ The optional Reflex path remains experimental until live evidence demonstrates e
 with zero deterministic authority-expansion violations.
 
 Route receipts remain `PROPOSED`; host execution and task correctness require separate runtime/verification evidence.
+
+## CI boundary
+
+Repository CI validates the deterministic fixture suite only. It never consumes `TYPESAFE_API_KEY`, never makes a live Jev request, and therefore cannot be cited as live-provider calibration evidence.
