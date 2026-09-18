@@ -1,6 +1,6 @@
 {
   "schema": "aet.provenance.imports.v1",
-  "generated_for_release": "1.0.0",
+  "generated_for_release": "1.1.0",
   "imports": [
     {
       "source": "haydarrjr/engineering-agent-toolkit",
@@ -29,6 +29,20 @@
         "marketplace/release concepts"
       ],
       "history_imported": false
+    },
+    {
+      "source": "haydarrjr/engineering-agent-toolkit",
+      "visibility_at_import": "private",
+      "commit": "2346885855e074cdb52f543b5e466c4dfd3de307",
+      "treatment": "transformed-and-relicensed-by-copyright-holder",
+      "areas": [
+        "margos host-native orchestration",
+        "compute-tier routing",
+        "Codex host-adapter concepts",
+        "GitHub Copilot leaf-agent concepts"
+      ],
+      "history_imported": false,
+      "notes": "Only maintainer-owned design concepts and rewritten source were adopted for AET 1.1.0; no private Git history, credentials, prompts, operational state, or private deployment details were imported."
     }
   ],
   "external_references": [

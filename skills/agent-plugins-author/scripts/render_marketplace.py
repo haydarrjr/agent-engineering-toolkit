@@ -2,16 +2,21 @@
 import argparse, json
 from pathlib import Path
 
+def render(root):
+    p=json.loads((root/'plugin.json').read_text(encoding='utf-8'))
+    c=json.loads((root/'.codex-plugin/plugin.json').read_text(encoding='utf-8'))
+    repo=p['repository'].removesuffix('.git')
+    return {
+        'name':p['name'],
+        'interface':{'displayName':c.get('interface',{}).get('displayName',p['name'])},
+        'plugins':[{'name':p['name'],'source':{'source':'url','url':repo+'.git','ref':'main'},'policy':{'installation':'AVAILABLE','authentication':'ON_INSTALL'},'category':c.get('interface',{}).get('category','Productivity')}],
+    }
+
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('root',nargs='?',default='.'); ap.add_argument('--check',action='store_true'); args=ap.parse_args(); root=Path(args.root).resolve()
-    p=json.loads((root/'plugin.json').read_text(encoding='utf-8'))
-    obj={'name':p['name'],'owner':{'name':p.get('author',{}).get('name','Unknown')},'metadata':{'description':p['description'],'version':p['version']},'plugins':[{'name':p['name'],'description':p['description'],'version':p['version'],'source':'.','license':p.get('license','')}]}
-    rendered=json.dumps(obj,indent=2,ensure_ascii=False)+'\n'
-    targets=[root/'.github/plugin/marketplace.json',root/'.agents/plugins/marketplace.json']
+    target=root/'.agents/plugins/marketplace.json'; rendered=json.dumps(render(root),indent=2,ensure_ascii=False)+'\n'
     if args.check:
-        bad=[str(t) for t in targets if not t.is_file() or t.read_text(encoding='utf-8')!=rendered]
-        if bad: raise SystemExit('marketplace drift: '+', '.join(bad))
-        print('Marketplace render check: PASS'); return
-    for t in targets: t.parent.mkdir(parents=True,exist_ok=True); t.write_text(rendered,encoding='utf-8')
-    print('Rendered marketplace surfaces')
+        if not target.is_file() or target.read_text(encoding='utf-8')!=rendered: raise SystemExit('Codex marketplace drift: '+str(target))
+        print('Codex marketplace render check: PASS'); return
+    target.parent.mkdir(parents=True,exist_ok=True); target.write_text(rendered,encoding='utf-8'); print('Rendered Codex marketplace')
 if __name__=='__main__': main()
