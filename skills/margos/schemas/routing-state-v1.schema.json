@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"MARGOS Routing State v1",
+  "type":"object",
+  "required":["task","host","authority","work_shape","evidence"],
+  "properties":{
+    "task":{"type":"object","required":["mutation_kind"],"properties":{"objective":{"type":"string"},"task_kind":{"type":"string"},"mutation_kind":{"enum":["READ_ONLY","LOCAL_WRITE","REMOTE_WRITE","DESTRUCTIVE_OR_PRODUCTION"]},"requested_outcome":{"type":"string"},"verification_obligation":{"type":"string"}},"additionalProperties":true},
+    "host":{"type":"object","required":["subagents_proven","available_compute_classes"],"properties":{"host_id":{"type":"string"},"subagents_proven":{"type":"boolean"},"per_child_model_control_proven":{"type":"boolean"},"reasoning_control_proven":{"type":"boolean"},"concurrency_proven":{"type":"boolean"},"isolation_proven":{"type":"boolean"},"available_compute_classes":{"type":"array","minItems":1,"uniqueItems":true,"items":{"enum":["ECONOMY_READ","BALANCED_EXEC","FRONTIER_REASONING"]}}},"additionalProperties":true},
+    "authority":{"type":"object","properties":{"explicit_model_provider_constraint":{"type":["string","null"]},"remote_write_authorized":{"type":"boolean"},"destructive_or_production_authorized":{"type":"boolean"},"unresolved_external_effect":{"type":"boolean"}},"additionalProperties":true},
+    "work_shape":{"type":"object","properties":{"obligation_count":{"type":"integer","minimum":0},"overlapping_write_scopes":{"type":"boolean"},"shared_state":{"type":"boolean"},"parallel_safe":{"type":"boolean"}},"additionalProperties":true},
+    "evidence":{"type":"object","properties":{"verification_failed":{"type":"boolean"},"conflicting_sources":{"type":"boolean"},"unresolved_ambiguity":{"type":"boolean"},"cross_system_impact":{"type":"boolean"},"high_impact_correctness_or_security":{"type":"boolean"}},"additionalProperties":true},
+    "budget":{"type":"object"}
+  },
+  "additionalProperties":false
+}

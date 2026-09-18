@@ -4,9 +4,24 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+### Added
+- MARGOS vNext three-layer Policy -> Reflex -> Execution contracts with versioned routing-state, Reflex, decision, and route-receipt schemas.
+- Optional stdlib TypeSafe Jev Reflex adapter with minimized state projection, typed fail-closed fallback, and no mandatory API key/dependency.
+- Frozen MARGOS routing benchmark with authority-boundary, keyword-noise, fallback, escalation, serialization, and abstention coverage.
+- Research and evaluation documentation covering Jev inspiration, routing/cascade literature, calibration, and selective deferral.
+
+### Changed
+- MARGOS now separates coordination shape, disposition, compute tier, and child role instead of conflating critic role with compute.
+- Codex and Copilot adapters consume proposed abstract routes while still requiring host runtime evidence before claiming delegated execution.
+
+### Security / boundaries
+- Reflex output cannot prove host capability or widen permissions.
+- Remote Reflex projection omits host identity and literal model/provider constraint values.
+- CI never requires a TypeSafe credential or live external model call.
+
 ### Planned
 - Gather external installation and compatibility reports.
-- Add maintainer-oriented PR/issue automation examples without adding mandatory runtime dependencies.
+- Collect live, explicitly authorized Jev routing measurements before making any calibration or promotion claim.
 
 ## [1.1.0] - 2026-09-18
 

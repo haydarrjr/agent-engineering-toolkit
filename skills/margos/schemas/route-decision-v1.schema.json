@@ -1,0 +1,16 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"MARGOS Route Decision v1",
+  "type":"object",
+  "required":["disposition","coordination","compute","role","source","abstained","model_provider_constraint"],
+  "properties":{
+    "disposition":{"enum":["PROCEED","FALLBACK_DIRECT","HALT"]},
+    "coordination":{"type":["string","null"],"enum":["DIRECT","TRANSFER","DELEGATED","SERIALIZED",null]},
+    "compute":{"type":["string","null"],"enum":["ECONOMY_READ","BALANCED_EXEC","FRONTIER_REASONING",null]},
+    "role":{"type":["string","null"],"enum":["PRIMARY","SCOUT","WORKER","VERIFIER","INDEPENDENT_CRITIC",null]},
+    "source":{"enum":["DETERMINISTIC_POLICY","POLICY_FALLBACK","LOW_MARGIN_FALLBACK","REFLEX_ASSISTED"]},
+    "abstained":{"type":"boolean"},
+    "model_provider_constraint":{"type":["string","null"]}
+  },
+  "additionalProperties":false
+}
