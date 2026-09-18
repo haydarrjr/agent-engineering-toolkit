@@ -1,5 +1,6 @@
 name: CI
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -27,6 +28,8 @@ jobs:
         run: python scripts/validate_margos_host_adapters.py
       - name: Unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: MARGOS frozen routing benchmark
+        run: python scripts/benchmark_margos_routing.py --mode fixture --strict
       - name: Python harness self-test
         run: python skills/python-engineering-harness/scripts/self_test.py
       - name: Agent Plugin validation

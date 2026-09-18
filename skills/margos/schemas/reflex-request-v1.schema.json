@@ -1,0 +1,20 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"MARGOS Reflex Request v1",
+  "type":"object",
+  "required":["schema_version","routing_state","admissible"],
+  "properties":{
+    "schema_version":{"const":"margos-reflex-request/v1"},
+    "routing_state":{"type":"object"},
+    "admissible":{
+      "type":"object",
+      "required":["coordination","compute","roles"],
+      "properties":{
+        "coordination":{"type":"array","items":{"enum":["DIRECT","TRANSFER","DELEGATED","SERIALIZED"]}},
+        "compute":{"type":"array","items":{"enum":["ECONOMY_READ","BALANCED_EXEC","FRONTIER_REASONING"]}},
+        "roles":{"type":"array","items":{"enum":["PRIMARY","SCOUT","WORKER","VERIFIER","INDEPENDENT_CRITIC"]}}
+      }
+    }
+  },
+  "additionalProperties":false
+}

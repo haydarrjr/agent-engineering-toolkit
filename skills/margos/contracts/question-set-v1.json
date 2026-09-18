@@ -1,0 +1,12 @@
+{
+  "version": "margos-questions/v1",
+  "questions": [
+    {"id":"coordination_preference","kind":"choice","choices":["DIRECT","TRANSFER","DELEGATED","SERIALIZED"],"criterion":"Smallest useful coordination shape within Policy-admissible routes."},
+    {"id":"compute_preference","kind":"choice","choices":["ECONOMY_READ","BALANCED_EXEC","FRONTIER_REASONING"],"criterion":"Lowest compute tier likely to close the declared obligation."},
+    {"id":"task_ambiguity","kind":"score","levels":["LOW","MODERATE","HIGH","SEVERE"],"criterion":"Material ambiguity that could change implementation or verification."},
+    {"id":"verification_risk","kind":"score","levels":["LOW","MEDIUM","HIGH","CRITICAL"],"criterion":"Risk that the selected route cannot close the declared verification obligation."},
+    {"id":"needs_escalation","kind":"noul","criterion":"Probability that a stronger compute tier is required now."},
+    {"id":"needs_independent_critic","kind":"noul","criterion":"Probability that fresh-context falsification materially improves the outcome."},
+    {"id":"transfer_sufficient","kind":"noul","criterion":"Probability that one bounded transfer can close the obligation without delegation."}
+  ]
+}

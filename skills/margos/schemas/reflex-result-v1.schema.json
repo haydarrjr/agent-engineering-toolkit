@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"MARGOS Reflex Result v1",
+  "type":"object",
+  "required":["schema_version","provider","question_set_sha256","answers"],
+  "properties":{
+    "schema_version":{"const":"margos-reflex-result/v1"},
+    "question_set_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+    "provider":{"type":"object","required":["kind","status","calibration_status"],"properties":{"kind":{"type":"string"},"status":{"enum":["AVAILABLE","UNAVAILABLE","ERROR","NOT_CONFIGURED"]},"calibration_status":{"enum":["UNKNOWN","UNCALIBRATED","CALIBRATED_FOR_FROZEN_SUITE","STALE"]}},"additionalProperties":true},
+    "answers":{"type":"object"}
+  },
+  "additionalProperties":false
+}
