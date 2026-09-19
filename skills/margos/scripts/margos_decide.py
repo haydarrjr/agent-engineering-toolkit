@@ -208,17 +208,23 @@ def _final(pre,candidate):
     return {**candidate,"model_provider_constraint":state["authority"]["explicit_model_provider_constraint"]}
 
 def decide(raw_state, provider: ReflexProvider|None=None):
-    pre=policy_pre_evaluate(raw_state); reflex=None; error=None; raw_reflex=None
-    provider_meta={"kind":"none","status":"NOT_CONFIGURED","calibration_status":"UNKNOWN"}
+    pre=policy_pre_evaluate(raw_state); reflex=None; raw_reflex=None
+    provider_meta={"kind":"none","status":"DISABLED","calibration_status":"UNKNOWN"}
     if provider is not None and pre["reflex_useful"] and pre["disposition"]!="HALT":
         try:
             raw_reflex=provider.evaluate(build_reflex_request(pre),QUESTION_SET)
-            if isinstance(raw_reflex,Mapping) and isinstance(raw_reflex.get("provider"),Mapping): provider_meta=dict(raw_reflex["provider"])
-            reflex=validate_reflex_result(raw_reflex,pre)
-            provider_meta=dict(reflex["provider"])
+            if isinstance(raw_reflex,Mapping) and isinstance(raw_reflex.get("provider"),Mapping):
+                provider_meta=dict(raw_reflex["provider"])
+            status=provider_meta.get("status")
+            if status=="AVAILABLE":
+                reflex=validate_reflex_result(raw_reflex,pre)
+                provider_meta=dict(reflex["provider"])
+            elif status in {"NOT_CONFIGURED","ERROR"}:
+                reflex=None
+            else:
+                raise ValueError(f"unsupported provider status: {status}")
         except (TypeError,ValueError,KeyError) as exc:
-            error=f"{type(exc).__name__}: {exc}"
-            provider_meta={**provider_meta,"status":"ERROR","error":error}
+            provider_meta={**provider_meta,"status":"ERROR","error":f"{type(exc).__name__}: {exc}"}
     decision=compose_decision(pre,reflex)
     return {"schema_version":"margos-route-receipt/v1","decision_authority":"PROPOSED","state_sha256":pre["state_sha256"],"policy_version":POLICY_VERSION,"question_set_version":QUESTION_SET_VERSION,"question_set_sha256":question_set_sha256(),"threshold_policy_version":THRESHOLD_POLICY_VERSION,"provider":provider_meta,"admissible":pre["admissible"],"blocked":pre["blocked"],"policy_rules_applied":pre["rules"],"reflex":{"answers":reflex["answers"] if reflex else {}},"selected":decision,"host_execution":{"status":"PENDING"}}
 

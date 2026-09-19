@@ -15,13 +15,14 @@ References:
 
 ## Runtime contract
 
-The optional adapter is `scripts/margos_reflex_jev.py`.
+The optional adapter is `skills/margos/scripts/margos_reflex_jev.py`.
 
 - Direct endpoint: `POST https://api.typesafe.ai/v1/systemone`.
 - Default model alias: `jev-latest`.
 - Credential: `TYPESAFE_API_KEY` read at runtime only.
 - Optional overrides: `TYPESAFE_BASE_URL` and `TYPESAFE_DEFAULT_MODEL`.
-- No key: return a typed unavailable state and let deterministic Policy fall back.
+- Provider selection is explicit; merely setting `TYPESAFE_API_KEY` does not enable a Reflex path.
+- Provider selected but no key: return `NOT_CONFIGURED`, perform zero network requests, and let deterministic Policy/conservative composition fall back.
 - Provider/transport/schema error: return a typed error state and let deterministic Policy fall back.
 - No automatic retry loop is added in the experimental adapter.
 
@@ -34,6 +35,13 @@ The adapter sends a bounded Reflex projection, not a transcript or repository du
 - connector state;
 - arbitrary raw logs.
 
-It includes only the task digest fields, boolean capability/authority facts, work-shape/evidence flags, budget class, and Policy-admissible choices needed for routing.
+It includes only the fields needed by the active decision family. Routing Reflex receives its existing bounded task/capability/evidence projection. Context Reflex receives bounded task fields plus candidate metadata (tool/locator, size, evidence flags, replayability, supersession, recency, and Policy-admissible actions). Context raw payloads, canonical item IDs, full transcripts, credentials, and unrelated source content are not sent.
 
 Do not enable a remote Reflex provider for proprietary/private state unless the deployment policy explicitly permits that processing.
+
+
+## Shared transport for Context Reflex
+
+Issue #10 Phase 2 reuses the same `JevReflexProvider`, HTTPS endpoint, Bearer credential, timeout/error boundary, and runtime environment variables for Context Reflex. The adapter dispatches by the typed request schema; it does not create another TypeSafe client.
+
+Context requests batch multiple independent Noul judgments against one minimized state. Batch size and projected-character budgets are deterministic local contracts. CI exercises fixture and injected-transport paths only; it never enables the live Jev provider.

@@ -1,0 +1,10 @@
+{
+  "version": "margos-context-thresholds/v1",
+  "full_threshold": 0.72,
+  "awareness_threshold": 0.60,
+  "replay_risk_threshold": 0.38,
+  "abstain_band": 0.08,
+  "max_items_per_batch": 8,
+  "max_projection_chars": 12000,
+  "provider_failure_action": "KEEP_REF"
+}

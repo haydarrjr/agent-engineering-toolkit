@@ -1,0 +1,26 @@
+{
+  "version": "margos-context-questions/v1",
+  "questions": [
+    {
+      "id": "keep_awareness",
+      "kind": "noul",
+      "criterion": "Does knowing that this context item or action existed still materially affect the next obligation?",
+      "true": "Awareness of the item can materially change the next reasoning or verification step.",
+      "false": "The next obligation can proceed safely without awareness of the item."
+    },
+    {
+      "id": "keep_full",
+      "kind": "noul",
+      "criterion": "Does the next obligation require this context item's exact full payload rather than a structured reference or safe replay?",
+      "true": "The exact full payload is materially needed now.",
+      "false": "A structured reference, bounded exact excerpt, or later rehydration is sufficient."
+    },
+    {
+      "id": "replay_needed",
+      "kind": "noul",
+      "criterion": "If this context item's payload is omitted now, is it likely to require rehydration before the current obligation can be closed?",
+      "true": "The item will probably need to be recovered before closure.",
+      "false": "The obligation is likely to close without recovering the payload."
+    }
+  ]
+}

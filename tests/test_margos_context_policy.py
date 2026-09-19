@@ -7,7 +7,9 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "skills/margos/scripts/margos_context.py"
+SCRIPTS = ROOT / "skills/margos/scripts"
+sys.path.insert(0, str(SCRIPTS))
+SCRIPT = SCRIPTS / "margos_context.py"
 spec = importlib.util.spec_from_file_location("margos_context", SCRIPT)
 mod = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = mod

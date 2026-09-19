@@ -63,3 +63,29 @@ Policy deterministically defines which context may be reduced. Context Reflex ma
 Phase 1 is deliberately offline and provider-free. The implementation adds versioned context item/state/decision/receipt schemas, deterministic protection and replayability rules, explicit supersession metadata, the PIN / KEEP_FULL / KEEP_REF / KEEP_HEAD / OMIT_REHYDRATABLE action model, content-addressed rehydration contracts, and a safe context materializer in skills/margos/scripts/margos_context.py.
 
 The deterministic baseline pins binding authority/evidence, keeps non-replayable items full, keeps structured references for current replayable eligible items, and permits omission only for replayable items that are explicitly superseded. No Phase 1 path deletes canonical evidence or repeats an external mutation.
+
+
+## Context Reflex Phase 2
+
+Phase 2 preserves the same three-layer architecture:
+
+```text
+deterministic Context Policy
+          |
+          v
+ optional Context Reflex
+ keep_awareness / keep_full / replay_needed
+          |
+          v
+ deterministic composition
+ thresholds / abstention / vetoes
+          |
+          v
+ derived Context View materializer
+```
+
+Only replayable Policy-eligible items can be evaluated by Context Reflex. Protected constraints/evidence and non-replayable items never enter the remote candidate set.
+
+The existing provider abstraction and TypeSafe/Jev transport are reused. Live Context Reflex is explicit opt-in; an API key in the environment does not activate it by itself. Missing key, malformed answer, or provider failure cannot authorize omission and falls back conservatively.
+
+The remote Context Reflex projection excludes raw item payloads and replaces local item IDs with batch-local candidate keys. Batch size and projection-character budgets are deterministic local contracts. Context receipts bind the question-set hash, threshold-policy version, provider status, request/network counts, and per-item Reflex probabilities without claiming that retained content is true or omitted content is irrelevant.

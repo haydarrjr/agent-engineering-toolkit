@@ -2,26 +2,46 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MARGOS Context Receipt v1",
   "type": "object",
-  "required": ["schema_version", "authority", "state_sha256", "policy_version", "provider", "input", "actions", "output", "context_view_sha256", "canonical_source_mutated", "rehydration_available"],
+  "required": ["schema_version", "authority", "state_sha256", "policy_version", "question_set_version", "question_set_sha256", "threshold_policy_version", "provider", "input", "actions", "output", "context_view_sha256", "canonical_source_mutated", "rehydration_available"],
   "properties": {
     "schema_version": {"const": "margos-context-receipt/v1"},
     "authority": {"const": "DERIVED_VIEW"},
     "state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "policy_version": {"const": "margos-context-policy/v1"},
+    "question_set_version": {"const": "margos-context-questions/v1"},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_version": {"const": "margos-context-thresholds/v1"},
     "provider": {
       "type": "object",
       "required": ["kind", "status"],
-      "properties": {"kind": {"const": "none"}, "status": {"const": "NOT_CONFIGURED"}},
-      "additionalProperties": false
+      "properties": {
+        "kind": {"type": "string"},
+        "status": {"enum": ["DISABLED", "NOT_NEEDED", "AVAILABLE", "NOT_CONFIGURED", "ERROR"]},
+        "calibration_status": {"type": "string"},
+        "request_count": {"type": "integer", "minimum": 0},
+        "network_request_count": {"type": "integer", "minimum": 0},
+        "items_evaluated": {"type": "integer", "minimum": 0},
+        "batch_count": {"type": "integer", "minimum": 0},
+        "requested_model": {"type": "string"},
+        "response_model": {"type": "string"},
+        "usage": {"type": "object"},
+        "error": {"type": "string"}
+      },
+      "additionalProperties": true
     },
     "input": {
-      "type": "object", "required": ["items", "characters"],
-      "properties": {"items": {"type": "integer", "minimum": 0}, "characters": {"type": "integer", "minimum": 0}},
+      "type": "object",
+      "required": ["items", "characters"],
+      "properties": {
+        "items": {"type": "integer", "minimum": 0},
+        "characters": {"type": "integer", "minimum": 0}
+      },
       "additionalProperties": false
     },
     "actions": {"type": "array", "items": {"$ref": "context-decision-v1.schema.json"}},
     "output": {
-      "type": "object", "required": ["items_active", "characters_serialized", "action_counts"],
+      "type": "object",
+      "required": ["items_active", "characters_serialized", "action_counts"],
       "properties": {
         "items_active": {"type": "integer", "minimum": 0},
         "characters_serialized": {"type": "integer", "minimum": 0},
