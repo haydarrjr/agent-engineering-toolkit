@@ -2,6 +2,8 @@
   "version": "margos-thresholds/v1",
   "choice_min_margin": 0.15,
   "needs_escalation": 0.75,
+  "task_ambiguity_high_probability": 0.55,
+  "verification_risk_high_probability": 0.55,
   "needs_independent_critic": 0.75,
   "transfer_sufficient": 0.60
 }
