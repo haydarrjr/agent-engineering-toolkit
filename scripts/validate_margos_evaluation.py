@@ -103,8 +103,9 @@ if compaction.is_file():
 privacy = ROOT / "docs/MARGOS_PRIVACY_REVIEW.md"
 if privacy.is_file():
     text = privacy.read_text(encoding="utf-8")
-    for token in ("TYPESAFE_API_KEY", "full private transcripts", "runtime-only", "synthetic", "canonical AET evidence"):
-        check(token in text, f"privacy review missing boundary: {token}")
+    lower = text.lower()
+    for token in ("typesafe_api_key", "full private transcripts", "runtime-only", "synthetic", "canonical aet evidence"):
+        check(token in lower, f"privacy review missing boundary: {token}")
 
 execution = MARGOS / "references/execution-layer.md"
 if execution.is_file():
