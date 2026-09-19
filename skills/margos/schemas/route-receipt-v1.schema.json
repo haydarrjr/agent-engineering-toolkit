@@ -2,7 +2,7 @@
   "$schema":"https://json-schema.org/draft/2020-12/schema",
   "title":"MARGOS Route Receipt v1",
   "type":"object",
-  "required":["schema_version","decision_authority","state_sha256","policy_version","question_set_version","question_set_sha256","threshold_policy_version","provider","admissible","blocked","policy_rules_applied","reflex","selected","host_execution"],
+  "required":["schema_version","decision_authority","state_sha256","policy_version","question_set_version","question_set_sha256","threshold_policy_version","threshold_policy_sha256","provider","admissible","blocked","policy_rules_applied","reflex","selected","host_execution"],
   "properties":{
     "schema_version":{"const":"margos-route-receipt/v1"},
     "decision_authority":{"const":"PROPOSED"},
@@ -11,6 +11,7 @@
     "question_set_version":{"const":"margos-questions/v1"},
     "question_set_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
     "threshold_policy_version":{"const":"margos-thresholds/v1"},
+    "threshold_policy_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
     "provider":{"type":"object"},
     "admissible":{"type":"object"},
     "blocked":{"type":"array"},
