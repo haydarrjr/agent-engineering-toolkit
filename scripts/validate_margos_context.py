@@ -115,7 +115,7 @@ if adapter.is_file():
     for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count'):
         check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
     check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
-    check(text.count('TYPESAFE_API_KEY')==1,'Jev adapter must use one existing TYPESAFE_API_KEY path')
+    check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')
 
 policy=(MARGOS/'references/context-retention-policy.md').read_text(encoding='utf-8') if (MARGOS/'references/context-retention-policy.md').is_file() else ''
 for token in ('PIN','KEEP_FULL','KEEP_REF','KEEP_HEAD','OMIT_REHYDRATABLE','MARGOS-CTX-POL-001'):
