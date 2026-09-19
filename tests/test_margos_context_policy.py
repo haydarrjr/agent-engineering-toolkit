@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -89,6 +90,15 @@ class ContextPolicyTests(unittest.TestCase):
         self.assertNotIn("old", {entry["item_id"] for entry in view["items"]})
         self.assertIn("old", {entry["item_id"] for entry in view["rehydration_index"]})
         self.assertTrue(receipt["rehydration_available"])
+
+    def test_frozen_fixture_materializes_bounded_child_ready_view(self):
+        fixture = json.loads((ROOT / "tests/fixtures/margos/context-materialization-v1.json").read_text(encoding="utf-8"))
+        view, receipt = mod.materialize_context_view(fixture["state"], fixture["payloads"])
+        actions = {entry["item_id"]: entry["action"] for entry in receipt["actions"]}
+        self.assertEqual(actions, fixture["expect"]["actions"])
+        self.assertEqual({entry["item_id"] for entry in view["items"]}, set(fixture["expect"]["active_ids"]))
+        self.assertTrue(set(fixture["expect"]["omitted_ids"]).isdisjoint({entry["item_id"] for entry in view["items"]}))
+        self.assertLess(receipt["output"]["characters_serialized"], receipt["input"]["characters"])
 
     def test_materializer_preserves_exact_pinned_payload_and_does_not_mutate_inputs(self):
         protected = "binding exact text"
