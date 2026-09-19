@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context State v1",
+  "type": "object",
+  "required": ["schema_version", "task", "items"],
+  "properties": {
+    "schema_version": {"const": "margos-context-state/v1"},
+    "task": {
+      "type": "object",
+      "properties": {
+        "task_id": {"type": "string"},
+        "objective": {"type": "string"},
+        "verification_obligation": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "items": {"type": "array", "items": {"$ref": "context-item-v1.schema.json"}},
+    "view": {
+      "type": "object",
+      "properties": {"head_chars": {"type": "integer", "minimum": 1}},
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

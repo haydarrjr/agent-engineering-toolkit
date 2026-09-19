@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Decision v1",
+  "type": "object",
+  "required": ["schema_version", "item_id", "protection_class", "action", "admissible_actions", "policy_rules_applied", "rehydration", "superseded_by"],
+  "properties": {
+    "schema_version": {"const": "margos-context-decision/v1"},
+    "item_id": {"type": "string", "minLength": 1},
+    "protection_class": {"enum": ["PINNED", "ELIGIBLE", "NO_REMOTE_EVAL", "NON_REPLAYABLE", "STALE_BUT_REQUIRED", "SUPERSEDED"]},
+    "action": {"enum": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]},
+    "admissible_actions": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": {"enum": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]}
+    },
+    "policy_rules_applied": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["rule_id", "detail"],
+        "properties": {"rule_id": {"type": "string"}, "detail": {"type": "string"}},
+        "additionalProperties": false
+      }
+    },
+    "rehydration": {
+      "type": "object",
+      "required": ["status", "method", "locator", "content_sha256", "may_repeat_external_effect", "authority_recheck_required"],
+      "properties": {
+        "status": {"enum": ["AVAILABLE", "UNAVAILABLE"]},
+        "method": {"enum": ["READ_FILE", "REPEAT_REPO_SEARCH", "READ_EVIDENCE_ARTIFACT", "REPEAT_TEST", "REPEAT_BUILD", "REFETCH_PUBLIC_DOC", "READ_CHILD_RESULT_STORE", "HOST_TRANSCRIPT_HANDLE", "UNAVAILABLE"]},
+        "locator": {"type": ["string", "null"]},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "may_repeat_external_effect": {"const": false},
+        "authority_recheck_required": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "superseded_by": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}

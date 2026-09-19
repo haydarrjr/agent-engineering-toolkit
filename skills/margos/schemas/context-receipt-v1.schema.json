@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Receipt v1",
+  "type": "object",
+  "required": ["schema_version", "authority", "state_sha256", "policy_version", "provider", "input", "actions", "output", "context_view_sha256", "canonical_source_mutated", "rehydration_available"],
+  "properties": {
+    "schema_version": {"const": "margos-context-receipt/v1"},
+    "authority": {"const": "DERIVED_VIEW"},
+    "state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_version": {"const": "margos-context-policy/v1"},
+    "provider": {
+      "type": "object",
+      "required": ["kind", "status"],
+      "properties": {"kind": {"const": "none"}, "status": {"const": "NOT_CONFIGURED"}},
+      "additionalProperties": false
+    },
+    "input": {
+      "type": "object", "required": ["items", "characters"],
+      "properties": {"items": {"type": "integer", "minimum": 0}, "characters": {"type": "integer", "minimum": 0}},
+      "additionalProperties": false
+    },
+    "actions": {"type": "array", "items": {"$ref": "context-decision-v1.schema.json"}},
+    "output": {
+      "type": "object", "required": ["items_active", "characters_serialized", "action_counts"],
+      "properties": {
+        "items_active": {"type": "integer", "minimum": 0},
+        "characters_serialized": {"type": "integer", "minimum": 0},
+        "action_counts": {
+          "type": "object",
+          "required": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"],
+          "properties": {
+            "PIN": {"type": "integer", "minimum": 0},
+            "KEEP_FULL": {"type": "integer", "minimum": 0},
+            "KEEP_REF": {"type": "integer", "minimum": 0},
+            "KEEP_HEAD": {"type": "integer", "minimum": 0},
+            "OMIT_REHYDRATABLE": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "context_view_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "canonical_source_mutated": {"const": false},
+    "rehydration_available": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

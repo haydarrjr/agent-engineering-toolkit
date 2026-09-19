@@ -14,3 +14,10 @@ Policy may:
 Policy must not infer capability from a profile, model label, prior success, or Reflex output. If one safe route remains, no probabilistic call is needed.
 
 The machine-readable implementation lives in `skills/margos/scripts/margos_decide.py`; Policy rule IDs are stable `MARGOS-POL-*` identifiers so tests and future route receipts can explain deterministic decisions without free-form model prose.
+
+
+## Context Policy
+
+Issue #10 extends deterministic Policy to context retention without creating a new authority layer. Before any future Context Reflex judgment, Policy pins still-binding user constraints, objectives, permissions, write ownership, protected paths, unresolved external effects, pending confirmation, active verification obligations, unresolved failures, contradictions, active Proof/Freshness bindings, and evidence supporting a claimed PASS.
+
+Replayability and supersession are deterministic metadata. Unknown or non-replayable evidence is never an omission candidate. Context compaction produces a derived Context View only; canonical evidence is never deleted or rewritten. See context-governor.md for the progressive-disclosure entry point.
