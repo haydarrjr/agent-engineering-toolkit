@@ -83,7 +83,8 @@ check(props.get('authority',{}).get('const')=='DERIVED_VIEW','context receipt au
 check(props.get('canonical_source_mutated',{}).get('const') is False,'context receipt must prove canonical source is not mutated')
 check(props.get('question_set_version',{}).get('const')=='margos-context-questions/v1','context receipt must bind question-set version')
 check(props.get('threshold_policy_version',{}).get('const')=='margos-context-thresholds/v1','context receipt must bind threshold-policy version')
-check(props.get('threshold_policy_sha256',{}).get('pattern')=='^[0-9a-f]{64}provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
+check(props.get('threshold_policy_sha256',{}).get('pattern')=='^[0-9a-f]{64}$','context receipt must bind threshold-policy hash')
+provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
 for status in ('DISABLED','AVAILABLE','NOT_CONFIGURED','ERROR'):
     check(status in provider_statuses,f'context receipt provider status missing {status}')
 
