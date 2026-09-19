@@ -41,3 +41,14 @@ Context Reflex was informed in part by the public fast-jev-compaction project by
 Reference: https://github.com/tamaratran/fast-jev-compaction
 
 This is conceptual attribution only. The AET implementation is independently designed around its own evidence, portability, privacy, and host-boundary requirements; no source from that project is copied.
+
+
+## Phase 3 and Phase 4 closure
+
+Phase 3 connects Context Governor to bounded role-aware child handoffs using `margos_handoff.py`; see `child-context.md`.
+
+Phase 4 adds the frozen counterfactual context benchmark, false-omit and rehydration metrics, privacy review, explicit live Jev research mode, and a host-neutral optional root-compaction proposal contract. CI runs only deterministic Policy and fixture Context Reflex modes.
+
+The committed frozen corpus must preserve all binding/protected state, produce zero harmful omission on its deterministic verification oracle, and demonstrate meaningful serialized-context reduction. Fixture Brier/ECE values test the evaluator only; they are not live calibration evidence.
+
+Live Jev research is explicit opt-in and remains uncalibrated until the exact deployed model/version, endpoint, question-set hash, threshold policy, projection, corpus, and observed outcomes are evaluated together.

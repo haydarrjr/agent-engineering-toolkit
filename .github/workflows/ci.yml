@@ -30,10 +30,16 @@ jobs:
         run: python scripts/validate_margos_context.py
       - name: MARGOS child-context contract
         run: python scripts/validate_margos_handoff.py
+      - name: MARGOS evaluation/privacy contract
+        run: python scripts/validate_margos_evaluation.py
       - name: Unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: MARGOS frozen routing benchmark
         run: python scripts/benchmark_margos_routing.py --mode fixture --strict
+      - name: MARGOS frozen context benchmark (policy)
+        run: python scripts/benchmark_margos_context.py --mode policy --strict
+      - name: MARGOS frozen context benchmark (fixture)
+        run: python scripts/benchmark_margos_context.py --mode fixture --strict
       - name: Python harness self-test
         run: python skills/python-engineering-harness/scripts/self_test.py
       - name: Agent Plugin validation

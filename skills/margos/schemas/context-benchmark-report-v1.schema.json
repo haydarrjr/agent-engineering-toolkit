@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Benchmark Report v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "fixture_version",
+    "mode",
+    "estimator",
+    "baselines",
+    "candidate",
+    "live_jev_research",
+    "privacy",
+    "promotion_gate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "margos-context-benchmark-report/v1"
+    },
+    "fixture_version": {
+      "const": "margos-context-benchmark/v1"
+    },
+    "mode": {
+      "enum": [
+        "policy",
+        "fixture",
+        "jev"
+      ]
+    },
+    "estimator": {
+      "type": "object"
+    },
+    "baselines": {
+      "type": "object"
+    },
+    "candidate": {
+      "type": "object"
+    },
+    "live_jev_research": {
+      "type": "object"
+    },
+    "privacy": {
+      "type": "object"
+    },
+    "promotion_gate": {
+      "type": "object",
+      "required": [
+        "status",
+        "failures",
+        "scope"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scope": {
+          "const": "FROZEN_FIXTURE_ONLY"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

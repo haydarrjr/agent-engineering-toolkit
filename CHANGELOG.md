@@ -9,7 +9,9 @@ All notable project changes are documented here.
 - Optional stdlib TypeSafe Jev Reflex adapter with minimized state projection, typed fail-closed fallback, and no mandatory API key/dependency.
 - Frozen MARGOS routing benchmark with authority-boundary, keyword-noise, fallback, escalation, serialization, and abstention coverage.
 - Research and evaluation documentation covering Jev inspiration, routing/cascade literature, calibration, and selective deferral.
-- MARGOS Context Governor Phase 1 deterministic retention/rehydration contracts and Phase 2 optional Context Reflex with atomic Noul judgments, batching, minimized remote projection, and conservative fallback.\n- MARGOS Context Governor Phase 3 role-aware child handoffs with versioned child contracts/policy, route-to-context hash binding, bounded Scout/Worker/Verifier/Critic bundles, and parent-side rehydration requests.
+- MARGOS Context Governor Phase 1 deterministic retention/rehydration contracts and Phase 2 optional Context Reflex with atomic Noul judgments, batching, minimized remote projection, and conservative fallback.
+- MARGOS Context Governor Phase 3 role-aware child handoffs with versioned child contracts/policy, route-to-context hash binding, bounded Scout/Worker/Verifier/Critic bundles, and parent-side rehydration requests.
+- MARGOS Context Governor Phase 4 frozen counterfactual benchmark, false-omit/rehydration/calibration metrics, privacy review, live Jev research mode, and optional host-neutral root-compaction proposal contract.
 
 ### Changed
 - MARGOS now separates coordination shape, disposition, compute tier, and child role instead of conflating critic role with compute.
@@ -20,6 +22,7 @@ All notable project changes are documented here.
 - Remote Reflex projection omits host identity and literal model/provider constraint values.
 - CI never requires a TypeSafe credential or live external model call.
 - Context Reflex is explicit opt-in: API-key presence alone does not enable it, missing-key selection performs zero network requests, and raw context payloads are excluded from the remote projection.
+- Phase 4 CI remains synthetic/offline, committed context fixtures are secret-scanned, and optional root compaction cannot run without explicit opt-in plus proven host capability.
 
 ### Planned
 - Gather external installation and compatibility reports.

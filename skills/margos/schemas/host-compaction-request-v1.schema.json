@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Host Compaction Request v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "host",
+    "experimental_adapter_enabled",
+    "context"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "margos-host-compaction-request/v1"
+    },
+    "host": {
+      "type": "object",
+      "required": [
+        "host_id",
+        "root_compaction_hook_proven",
+        "native_compaction_proven"
+      ],
+      "properties": {
+        "host_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "root_compaction_hook_proven": {
+          "type": "boolean"
+        },
+        "native_compaction_proven": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "experimental_adapter_enabled": {
+      "type": "boolean"
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "authority",
+        "canonical_source_mutated",
+        "context_view_sha256",
+        "input_characters",
+        "output_characters"
+      ],
+      "properties": {
+        "authority": {
+          "const": "DERIVED_VIEW"
+        },
+        "canonical_source_mutated": {
+          "const": false
+        },
+        "context_view_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "input_characters": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_characters": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

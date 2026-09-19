@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Host Compaction Result v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "decision_authority",
+    "policy_version",
+    "action",
+    "reason",
+    "reduction_ratio",
+    "host_execution",
+    "canonical_source_mutated"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "margos-host-compaction-result/v1"
+    },
+    "decision_authority": {
+      "const": "PROPOSED"
+    },
+    "policy_version": {
+      "const": "margos-host-compaction-policy/v1"
+    },
+    "action": {
+      "enum": [
+        "NO_AET_INTERCEPTION",
+        "DEFER_HOST_NATIVE",
+        "OFFER_DERIVED_VIEW"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reduction_ratio": {
+      "type": "number"
+    },
+    "context_view_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "host_execution": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PENDING",
+            "NOT_APPLICABLE",
+            "OBSERVED",
+            "FAILED"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "canonical_source_mutated": {
+      "const": false
+    }
+  },
+  "additionalProperties": false
+}
