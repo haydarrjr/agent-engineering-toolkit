@@ -29,7 +29,7 @@ for name in ('question-set-v1.json','threshold-policy-v1.json'):
         try: json.loads(path.read_text(encoding='utf-8'))
         except json.JSONDecodeError as exc: errors.append(f'invalid contract {name}: {exc}')
 
-for name in ('routing-state-v1.schema.json','reflex-request-v1.schema.json','reflex-result-v1.schema.json','route-decision-v1.schema.json','route-receipt-v1.schema.json'):
+for name in ('routing-state-v1.schema.json','reflex-request-v1.schema.json','reflex-result-v1.schema.json','route-decision-v1.schema.json','route-receipt-v1.schema.json','jev-calibration-binding-v1.schema.json'):
     path=MARGOS/'schemas'/name
     check(path.is_file(),f'missing MARGOS schema: {name}')
     if path.is_file():
