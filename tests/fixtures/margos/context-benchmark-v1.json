@@ -1,0 +1,834 @@
+{
+  "version": "margos-context-benchmark/v1",
+  "estimator": {
+    "kind": "ESTIMATED",
+    "method": "ceil(characters/4)"
+  },
+  "strict_gates": {
+    "minimum_cases": 10,
+    "minimum_candidate_verified_success_rate": 1,
+    "minimum_aggregate_serialized_reduction_ratio": 0.4,
+    "maximum_harmful_omission_rate": 0,
+    "maximum_protected_loss_violations": 0,
+    "maximum_non_replayable_omission_violations": 0,
+    "maximum_external_effect_loss_violations": 0,
+    "maximum_contradiction_loss_violations": 0,
+    "maximum_forbidden_context_violations": 0
+  },
+  "cases": [
+    {
+      "id": "old-binding-constraint",
+      "role": "SCOUT",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 1,
+        "max_optional_payload_chars": 96
+      },
+      "items": [
+        {
+          "id": "constraint",
+          "chars": 320,
+          "fill": "USER_CONSTRAINT_",
+          "tool": "user_message",
+          "locator": "session/turn-2",
+          "authority": [
+            "contains_user_constraint"
+          ],
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "search",
+          "chars": 5200,
+          "fill": "SEARCH_MATCH_",
+          "tool": "repo_search",
+          "locator": "src/router.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "chatter",
+          "chars": 11000,
+          "fill": "CHATTER_",
+          "tool": "read_file",
+          "locator": "notes/chatter.txt",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "search"
+        ],
+        "required_full_ids": [],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Map the requested symbol.",
+        "output_contract": "Return paths and evidence."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "constraint",
+          "search"
+        ],
+        "required_exact_ids": [
+          "search"
+        ],
+        "forbidden_ids": [
+          "chatter"
+        ]
+      }
+    },
+    {
+      "id": "worker-owned-path",
+      "role": "WORKER",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 1,
+        "max_optional_payload_chars": 96
+      },
+      "items": [
+        {
+          "id": "constraint",
+          "chars": 280,
+          "fill": "PROTECTED_",
+          "tool": "user_message",
+          "locator": "session/turn-1",
+          "authority": [
+            "contains_protected_path"
+          ],
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "owned",
+          "chars": 7600,
+          "fill": "OWNED_CODE_",
+          "tool": "read_file",
+          "locator": "src/owned/worker.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "unrelated",
+          "chars": 14000,
+          "fill": "UNRELATED_",
+          "tool": "read_file",
+          "locator": "src/other/huge.py",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "owned"
+        ],
+        "required_full_ids": [
+          "owned"
+        ],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [
+          "src/owned"
+        ],
+        "verification_obligation": "Preserve the requested behavior.",
+        "output_contract": "Return changed paths and checks."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "constraint",
+          "owned"
+        ],
+        "required_exact_ids": [
+          "owned"
+        ],
+        "forbidden_ids": [
+          "unrelated"
+        ]
+      }
+    },
+    {
+      "id": "failed-then-success-verifier",
+      "role": "VERIFIER",
+      "coordination": "SERIALIZED",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "implementation",
+          "chars": 4200,
+          "fill": "PATCH_",
+          "tool": "read_child_result",
+          "locator": ".aet/results/worker.json",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "old_fail",
+          "chars": 8800,
+          "fill": "OLD_FAIL_",
+          "tool": "run_test",
+          "locator": ".aet/tests/old.log",
+          "superseded_by": "success",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "success",
+          "chars": 6500,
+          "fill": "SUCCESS_",
+          "tool": "run_test",
+          "locator": ".aet/tests/success.log",
+          "evidence": [
+            "supports_claimed_pass"
+          ],
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "chatter",
+          "chars": 9000,
+          "fill": "WORKER_CHATTER_",
+          "tool": "read_file",
+          "locator": "notes/worker.txt",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [],
+        "required_full_ids": [],
+        "implementation_result_ids": [
+          "implementation"
+        ],
+        "verification_evidence_ids": [
+          "success"
+        ],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Reproduce the successful verification.",
+        "output_contract": "Return PASS, FAIL, or UNVERIFIED."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "implementation",
+          "success"
+        ],
+        "required_exact_ids": [
+          "implementation",
+          "success"
+        ],
+        "forbidden_ids": [
+          "old_fail",
+          "chatter"
+        ]
+      }
+    },
+    {
+      "id": "active-contradiction",
+      "role": "SCOUT",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "contradiction",
+          "chars": 900,
+          "fill": "CONTRADICTION_",
+          "tool": "doc_compare",
+          "locator": ".aet/evidence/conflict.json",
+          "evidence": [
+            "contradiction_open"
+          ],
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "doc",
+          "chars": 7200,
+          "fill": "DOC_",
+          "tool": "repo_search",
+          "locator": "docs/spec.md",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "noise",
+          "chars": 12000,
+          "fill": "NOISE_",
+          "tool": "read_file",
+          "locator": "docs/history.md",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "doc"
+        ],
+        "required_full_ids": [],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Keep the contradiction visible.",
+        "output_contract": "Return conflicting evidence."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "contradiction",
+          "doc"
+        ],
+        "required_exact_ids": [
+          "doc"
+        ],
+        "forbidden_ids": [
+          "noise"
+        ]
+      }
+    },
+    {
+      "id": "unresolved-external-effect",
+      "role": "SCOUT",
+      "coordination": "SERIALIZED",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "effect",
+          "chars": 1800,
+          "fill": "AMBIGUOUS_REMOTE_",
+          "tool": "remote_mutation_readback",
+          "locator": "external/run-44",
+          "authority": [
+            "contains_unresolved_external_effect"
+          ],
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "lookup",
+          "chars": 5600,
+          "fill": "LOOKUP_",
+          "tool": "repo_search",
+          "locator": "src/integration.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "noise",
+          "chars": 14000,
+          "fill": "BUILD_NOISE_",
+          "tool": "run_build",
+          "locator": ".aet/build/noise.log",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "lookup"
+        ],
+        "required_full_ids": [],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Do not lose unresolved external-effect state.",
+        "output_contract": "Return reconciliation evidence."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "effect",
+          "lookup"
+        ],
+        "required_exact_ids": [
+          "effect",
+          "lookup"
+        ],
+        "forbidden_ids": [
+          "noise"
+        ]
+      }
+    },
+    {
+      "id": "non-replayable-transient",
+      "role": "SCOUT",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "transient",
+          "chars": 2400,
+          "fill": "TRANSIENT_",
+          "tool": "credentialed_read",
+          "locator": "external/transient-9",
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "search",
+          "chars": 6000,
+          "fill": "SEARCH_",
+          "tool": "repo_search",
+          "locator": "src/api.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "noise",
+          "chars": 12000,
+          "fill": "NOISE_",
+          "tool": "read_file",
+          "locator": "notes/old.txt",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "search"
+        ],
+        "required_full_ids": [],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Preserve non-replayable evidence.",
+        "output_contract": "Return bounded mapping."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "transient",
+          "search"
+        ],
+        "required_exact_ids": [
+          "transient",
+          "search"
+        ],
+        "forbidden_ids": [
+          "noise"
+        ]
+      }
+    },
+    {
+      "id": "critic-fresh-context",
+      "role": "INDEPENDENT_CRITIC",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 4,
+        "max_optional_payload_chars": 512
+      },
+      "items": [
+        {
+          "id": "constraint",
+          "chars": 300,
+          "fill": "SECURITY_BOUNDARY_",
+          "tool": "user_message",
+          "locator": "session/turn-5",
+          "authority": [
+            "contains_user_constraint"
+          ],
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "implementation",
+          "chars": 5200,
+          "fill": "IMPLEMENTATION_",
+          "tool": "read_child_result",
+          "locator": ".aet/results/worker.json",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "fresh",
+          "chars": 6400,
+          "fill": "FRESH_EVIDENCE_",
+          "tool": "read_file",
+          "locator": "src/security.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "worker_chatter",
+          "chars": 18000,
+          "fill": "WORKER_CHATTER_",
+          "tool": "read_file",
+          "locator": "notes/worker-chat.txt",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [],
+        "required_full_ids": [],
+        "implementation_result_ids": [
+          "implementation"
+        ],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [
+          "fresh"
+        ],
+        "owned_paths": [],
+        "verification_obligation": "Try to falsify the implementation.",
+        "output_contract": "Return concrete falsification findings."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "constraint",
+          "implementation",
+          "fresh"
+        ],
+        "required_exact_ids": [
+          "implementation",
+          "fresh"
+        ],
+        "forbidden_ids": [
+          "worker_chatter"
+        ]
+      }
+    },
+    {
+      "id": "serial-worker-handoff",
+      "role": "WORKER",
+      "coordination": "SERIALIZED",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "previous",
+          "chars": 4800,
+          "fill": "PREVIOUS_STEP_",
+          "tool": "read_child_result",
+          "locator": ".aet/results/step-1.json",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "current",
+          "chars": 7400,
+          "fill": "CURRENT_CODE_",
+          "tool": "read_file",
+          "locator": "src/serial/current.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "old",
+          "chars": 15000,
+          "fill": "OLD_CONTEXT_",
+          "tool": "read_file",
+          "locator": "src/old/unused.py",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "previous",
+          "current"
+        ],
+        "required_full_ids": [
+          "current"
+        ],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [
+          "src/serial"
+        ],
+        "verification_obligation": "Use prior-step result without inheriting unrelated state.",
+        "output_contract": "Return scoped implementation."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "previous",
+          "current"
+        ],
+        "required_exact_ids": [
+          "previous",
+          "current"
+        ],
+        "forbidden_ids": [
+          "old"
+        ]
+      }
+    },
+    {
+      "id": "long-trivial-context",
+      "role": "SCOUT",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "needle",
+          "chars": 4400,
+          "fill": "NEEDLE_",
+          "tool": "repo_search",
+          "locator": "src/needle.py",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": false,
+            "replay_needed": true
+          }
+        },
+        {
+          "id": "bulk1",
+          "chars": 18000,
+          "fill": "BULK1_",
+          "tool": "read_file",
+          "locator": "docs/bulk1.md",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "bulk2",
+          "chars": 18000,
+          "fill": "BULK2_",
+          "tool": "read_file",
+          "locator": "docs/bulk2.md",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "bulk3",
+          "chars": 18000,
+          "fill": "BULK3_",
+          "tool": "read_file",
+          "locator": "docs/bulk3.md",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [
+          "needle"
+        ],
+        "required_full_ids": [],
+        "implementation_result_ids": [],
+        "verification_evidence_ids": [],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Return the matching path only.",
+        "output_contract": "Return exact match evidence."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "needle"
+        ],
+        "required_exact_ids": [
+          "needle"
+        ],
+        "forbidden_ids": [
+          "bulk1",
+          "bulk2",
+          "bulk3"
+        ]
+      }
+    },
+    {
+      "id": "short-high-impact",
+      "role": "VERIFIER",
+      "coordination": "TRANSFER",
+      "budget": {
+        "max_optional_items": 0,
+        "max_optional_payload_chars": 0
+      },
+      "items": [
+        {
+          "id": "constraint",
+          "chars": 260,
+          "fill": "NEVER_EDIT_GENERATED_",
+          "tool": "user_message",
+          "locator": "session/turn-1",
+          "authority": [
+            "contains_protected_path"
+          ],
+          "replay": "NON_REPLAYABLE",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "implementation",
+          "chars": 900,
+          "fill": "SMALL_PATCH_",
+          "tool": "read_child_result",
+          "locator": ".aet/results/high-impact.json",
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "proof",
+          "chars": 700,
+          "fill": "PROOF_",
+          "tool": "run_check",
+          "locator": ".aet/proof/high-impact.log",
+          "evidence": [
+            "proof_bound"
+          ],
+          "gold": {
+            "keep_awareness": true,
+            "keep_full": true,
+            "replay_needed": false
+          }
+        },
+        {
+          "id": "tiny_noise",
+          "chars": 220,
+          "fill": "OK_",
+          "tool": "read_file",
+          "locator": "notes/tiny.txt",
+          "gold": {
+            "keep_awareness": false,
+            "keep_full": false,
+            "replay_needed": false
+          }
+        }
+      ],
+      "contract": {
+        "required_context_ids": [],
+        "required_full_ids": [],
+        "implementation_result_ids": [
+          "implementation"
+        ],
+        "verification_evidence_ids": [
+          "proof"
+        ],
+        "fresh_evidence_ids": [],
+        "owned_paths": [],
+        "verification_obligation": "Verify high-impact protected-path behavior.",
+        "output_contract": "Return PASS, FAIL, or UNVERIFIED."
+      },
+      "oracle": {
+        "required_awareness_ids": [
+          "constraint",
+          "implementation",
+          "proof"
+        ],
+        "required_exact_ids": [
+          "implementation",
+          "proof"
+        ],
+        "forbidden_ids": [
+          "tiny_noise"
+        ]
+      }
+    }
+  ]
+}

@@ -19,10 +19,15 @@
 - Optional Jev-inspired Reflex adapter with data minimization
 - Host-native Execution mapping through existing Codex/Copilot surfaces
 - Frozen routing benchmark and calibration harness
-- No mandatory external provider, MCP server, daemon, or API key
+- Evidence-aware Context Governor with deterministic retention/rehydration
+- Optional Context Reflex using the existing Jev transport
+- Role-aware Scout/Worker/Verifier/Critic child bundles
+- Frozen full-vs-compacted context benchmark and privacy review
+- Optional host-neutral root-compaction proposal contract
+- No mandatory external provider, MCP server, daemon, API key, or host compaction hook
 
 ## Near term
-- Collect explicit live-provider routing evidence before promoting Reflex beyond experimental
+- Collect explicit live-provider routing and Context Reflex evidence before promoting Reflex beyond experimental
 - Collect external install reports across compatible hosts
 - Add real-world routing fixtures from community issues
 - Add release automation examples for maintainers

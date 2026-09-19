@@ -96,3 +96,55 @@ Phase 3 CI verifies:
 - a Context Reflex provider is invoked only once per handoff batch.
 
 These deterministic fixture checks demonstrate bounded-context reduction without a fixture-level evidence-coverage regression. They are not a live verified-success or model-calibration claim. Full counterfactual success, false-omit, rehydration-cost, and live Jev measurements remain Phase 4.
+
+
+## Phase 4 frozen context benchmark
+
+The frozen corpus is `tests/fixtures/margos/context-benchmark-v1.json`. It contains synthetic cases for old binding constraints, owned-path work, failed-then-successful verification, contradictions, unresolved external effects, non-replayable evidence, critic handoff, serialized work, long trivial context, and short high-impact context.
+
+Run the portable gates:
+
+```bash
+python scripts/benchmark_margos_context.py --mode policy --strict
+python scripts/benchmark_margos_context.py --mode fixture --strict
+```
+
+Each case compares:
+- Baseline A: all context retained verbatim;
+- Baseline B: deterministic Context Policy;
+- Candidate D: Policy + fixture Context Reflex;
+- Baseline C host-native root compaction is reported as not observable in portable CI;
+- Candidate E live Jev is available only through explicit research mode.
+
+The deterministic downstream oracle names required awareness, required exact evidence, and forbidden inherited context. If exact evidence is only a reference/head, the benchmark performs the same parent-side hash-checked rehydration protocol used by Phase 3. A compacted case is successful only when the required evidence remains available after any permitted rehydration.
+
+Strict frozen gates require:
+- 100% candidate verified-success on the corpus;
+- zero harmful omission;
+- zero protected/non-replayable/external-effect/contradiction loss;
+- zero forbidden-context violation;
+- at least 40% aggregate serialized-context reduction;
+- committed fixture secret scan PASS.
+
+Reported metrics include estimated before/after tokens, serialized reduction, provider request/network/token counts, compaction latency, rehydration count/characters/latency, harmful/costly omission, false-full retention, Brier score, and five-bin ECE when probabilities are available.
+
+The fallback token estimator is explicitly marked estimated and uses `ceil(characters/4)`; host/tokenizer measurements should replace it when a host exposes trustworthy token counts.
+
+### Live Jev research mode
+
+```bash
+TYPESAFE_API_KEY=... \
+python scripts/benchmark_margos_context.py \
+  --mode jev \
+  --output .aet/margos-context-jev-eval.json
+```
+
+Live mode reuses the existing optional TypeSafe/Jev adapter and credential path. The key is never committed. A missing key yields `NOT_CONFIGURED` and zero network calls.
+
+A live run may report Brier/ECE and false-omit/false-keep observations against this corpus, but no `CALIBRATED` claim is made automatically. Fixture probabilities remain evaluator self-tests, not provider calibration.
+
+## Privacy and optional host compaction
+
+The Phase 4 privacy review is `docs/MARGOS_PRIVACY_REVIEW.md`. It confirms the portable default remains metadata/bounded-context only and CI is synthetic/offline.
+
+`margos_host_compaction.py` defines only a host-neutral proposal contract. Root transcript interception requires explicit experimental opt-in, a proven host hook, a `DERIVED_VIEW`, unchanged canonical source, and sufficient reduction. Codex/Copilot continue using the Phase 3 child-bundle baseline unless a future stable host contract is observed.

@@ -110,3 +110,26 @@ Scout, Worker, Verifier, and Independent Critic receive distinct bounded bundles
 The child-context receipt binds the unbound route receipt, parent context receipt/view, handoff-policy version, bundle hash, required coverage, and reduction metrics. Binding is derived and never mutates canonical evidence.
 
 Child rehydration is request-only from the leaf agent. Exact recovery is performed at the parent boundary with the existing content-hash checks. Recompute/refetch methods that require authority review remain pending until that review occurs.
+
+
+## Evaluation and optional compaction Phase 4
+
+Phase 4 closes Issue #10 without changing the three-layer authority model.
+
+```text
+canonical evidence
+      |
+Policy -> optional Context Reflex
+      |
+derived Context View / child bundle
+      |
+counterfactual benchmark + rehydration oracle
+      |
+optional host-neutral compaction proposal
+      |
+host runtime evidence, if any
+```
+
+The frozen benchmark evaluates full-context vs deterministic Policy vs fixture Context Reflex on synthetic evidence-bound cases. Harmful omission, protected-state loss, non-replayable omission, unresolved external-effect loss, contradiction loss, verified-success, reduction, rehydration, provider usage, and probability metrics are recorded.
+
+Optional root compaction remains outside the portable authority path. The core only proposes whether to leave context untouched, defer to a proven host-native compactor, or offer an already-derived view to an explicitly enabled/proven hook. It never claims application without host runtime evidence.

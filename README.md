@@ -52,7 +52,7 @@ root / parent session
 
 Routing is evidence-driven. Prompt length, file count, or the words "research" and "review" are not escalation signals by themselves. An explicit user model/provider constraint remains authoritative. If a host cannot prove child/model-routing capability, MARGOS falls back to direct execution rather than claiming a model switch occurred.
 
-MARGOS vNext separates deterministic Policy, optional typed Reflex judgment, and host-native Execution. The Reflex shape is explicitly inspired by TypeSafe AI's Jev/System One typed-decision approach, but Jev is optional and experimental: AET does not implement TypeSafe's proprietary model/training stack, does not require a TypeSafe key, and does not treat provider confidence as execution authority.
+MARGOS vNext separates deterministic Policy, optional typed Reflex judgment, and host-native Execution. Its Context Governor also builds bounded evidence-sufficient child bundles, preserves content-addressed rehydration, and evaluates full-vs-compacted context with frozen counterfactual fixtures. The Reflex shape is explicitly inspired by TypeSafe AI's Jev/System One typed-decision approach, but Jev is optional and experimental: AET does not implement TypeSafe's proprietary model/training stack, does not require a TypeSafe key, and does not treat provider confidence as execution authority. Root transcript compaction is not a portable dependency.
 
 ## Quick examples
 
@@ -122,8 +122,13 @@ AET has no required third-party Python dependency for source validation.
 ```bash
 python scripts/validate_repository.py
 python scripts/validate_margos_host_adapters.py
+python scripts/validate_margos_context.py
+python scripts/validate_margos_handoff.py
+python scripts/validate_margos_evaluation.py
 python -m unittest discover -s tests -p 'test_*.py' -v
 python scripts/benchmark_margos_routing.py --mode fixture --strict
+python scripts/benchmark_margos_context.py --mode policy --strict
+python scripts/benchmark_margos_context.py --mode fixture --strict
 python skills/python-engineering-harness/scripts/self_test.py
 python skills/rethinking/scripts/audit_repository.py --root . --format text
 python skills/agent-plugins-author/scripts/validate_agent_plugin.py .

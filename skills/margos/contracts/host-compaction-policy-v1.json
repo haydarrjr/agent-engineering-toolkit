@@ -1,0 +1,16 @@
+{
+  "version": "margos-host-compaction-policy/v1",
+  "minimum_serialized_reduction_ratio": 0.2,
+  "allowed_actions": [
+    "NO_AET_INTERCEPTION",
+    "DEFER_HOST_NATIVE",
+    "OFFER_DERIVED_VIEW"
+  ],
+  "invariants": {
+    "explicit_experimental_opt_in_required": true,
+    "proven_root_hook_required_for_offer": true,
+    "derived_view_authority_required": true,
+    "canonical_source_mutated_must_be_false": true,
+    "host_execution_evidence_required_for_applied_claim": true
+  }
+}

@@ -26,3 +26,10 @@ Portable order:
 A `DIRECT` / `PRIMARY` route does not create a child bundle. Load [role-aware child context](child-context.md) for role policy, bindings, and rehydration.
 
 Route/context receipts remain proposed/derived artifacts; they do not prove a child or exact model actually ran.
+
+
+## Phase 4 optional root compaction
+
+Portable MARGOS does not assume control over the root transcript. Load [optional host compaction](host-compaction.md) only when the current host exposes a proven root-compaction surface and the user/deployment has explicitly enabled the experimental adapter.
+
+The portable proposal helper is `margos_host_compaction.py`. It can only return `NO_AET_INTERCEPTION`, `DEFER_HOST_NATIVE`, or `OFFER_DERIVED_VIEW`. The result remains `PROPOSED`; applying a view requires separate host runtime evidence.
