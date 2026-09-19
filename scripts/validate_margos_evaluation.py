@@ -56,7 +56,7 @@ secret_patterns = (
     r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}",
     r"\bTYPESAFE_API_KEY\s*=",
     r"\bsk-[A-Za-z0-9_-]{16,}",
-    r"\bghp_[A-Za-z0-9]{20,}",
+    r"\b" + "gh" + r"p_[A-Za-z0-9]{20,}",
     r"\bgithub_pat_[A-Za-z0-9_]{20,}",
     r"\bAKIA[0-9A-Z]{16}\b",
 )
