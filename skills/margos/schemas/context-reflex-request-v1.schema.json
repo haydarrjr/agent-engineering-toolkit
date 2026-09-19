@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MARGOS Context Reflex Request v1",
   "type": "object",
-  "required": ["schema_version", "task", "candidates", "question_set_sha256"],
+  "required": ["schema_version", "task", "candidates", "question_set_sha256", "threshold_policy_sha256"],
   "properties": {
     "schema_version": {"const": "margos-context-reflex-request/v1"},
     "task": {
@@ -29,6 +29,7 @@
           "replay": {"type": "object"},
           "supersession": {"type": "object"},
           "recency": {"type": "object"},
+          "semantic_capsule": {"type": "object", "required": ["kind","text","characters","sha256"], "properties": {"kind": {"const":"EXACT_PREFIX"}, "text":{"type":"string","maxLength":512}, "characters":{"type":"integer","minimum":0,"maximum":512}, "sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}, "additionalProperties": false},
           "admissible_actions": {
             "type": "array",
             "items": {"enum": ["KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]}
@@ -37,7 +38,8 @@
         "additionalProperties": false
       }
     },
-    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
   },
   "additionalProperties": false
 }

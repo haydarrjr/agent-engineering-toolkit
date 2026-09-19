@@ -1,6 +1,6 @@
 {
   "schema": "aet.provenance.imports.v1",
-  "generated_for_release": "1.1.0",
+  "generated_for_release": "1.2.0",
   "imports": [
     {
       "source": "haydarrjr/engineering-agent-toolkit",
@@ -56,6 +56,12 @@
       "publisher": "GitHub",
       "purpose": "Agent Plugins and Copilot marketplace compatibility",
       "url": "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
+      "vendored": false
+    },
+    {
+      "publisher": "TypeSafe AI",
+      "purpose": "Jev/System One typed decision and probability interface reference",
+      "url": "https://docs.typesafe.ai/introduction",
       "vendored": false
     }
   ]

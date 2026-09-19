@@ -1,0 +1,62 @@
+{
+  "version": "margos-trace-benchmark/v1",
+  "redacted": true,
+  "description": "Synthetic privacy-safe examples for the same format used by local redacted Codex trace exports.",
+  "cases": [
+    {
+      "id": "routing-bounded-read",
+      "kind": "routing",
+      "state": {
+        "task": {"objective": "inspect parser", "task_kind": "RESEARCH", "mutation_kind": "READ_ONLY", "requested_outcome": "report", "verification_obligation": "evidence-backed answer"},
+        "host": {"host_id": "redacted-host", "subagents_proven": true, "per_child_model_control_proven": true, "reasoning_control_proven": true, "concurrency_proven": true, "isolation_proven": true, "available_compute_classes": ["ECONOMY_READ","BALANCED_EXEC","FRONTIER_REASONING"]},
+        "authority": {"explicit_model_provider_constraint": null, "remote_write_authorized": false, "destructive_or_production_authorized": false, "unresolved_external_effect": false},
+        "work_shape": {"obligation_count": 2, "overlapping_write_scopes": false, "shared_state": false, "parallel_safe": true},
+        "evidence": {"verification_failed": false, "conflicting_sources": false, "unresolved_ambiguity": false, "cross_system_impact": false, "high_impact_correctness_or_security": false},
+        "budget": {"max_children": 2, "max_escalations": 1, "cost_class": "NORMAL", "latency_class": "NORMAL"}
+      },
+      "answers": {
+        "coordination_preference": {"value": "TRANSFER", "probabilities": {"DIRECT": 0.05, "TRANSFER": 0.85, "DELEGATED": 0.05, "SERIALIZED": 0.05}},
+        "compute_preference": {"value": "ECONOMY_READ", "probabilities": {"ECONOMY_READ": 0.90, "BALANCED_EXEC": 0.07, "FRONTIER_REASONING": 0.03}},
+        "task_ambiguity": {"value": "LOW", "probabilities": {"LOW": 0.90, "MODERATE": 0.06, "HIGH": 0.03, "SEVERE": 0.01}},
+        "verification_risk": {"value": "LOW", "probabilities": {"LOW": 0.90, "MEDIUM": 0.06, "HIGH": 0.03, "CRITICAL": 0.01}},
+        "needs_escalation": {"probability": 0.05},
+        "needs_independent_critic": {"probability": 0.05},
+        "transfer_sufficient": {"probability": 0.90}
+      },
+      "gold_route": {"disposition": "PROCEED", "coordination": "TRANSFER", "compute": "ECONOMY_READ", "role": "SCOUT"}
+    },
+    {
+      "id": "context-safe-reference",
+      "kind": "context",
+      "state": {
+        "schema_version": "margos-context-state/v1",
+        "task": {"task_id": "trace-context", "objective": "retain only useful parser context", "verification_obligation": "preserve replayable evidence"},
+        "items": [
+          {
+            "schema_version": "margos-context-item/v1",
+            "item_id": "ctx-1",
+            "kind": "TOOL_RESULT",
+            "source": {"tool": "read_file", "locator": "src/parser.py", "result_status": "OK", "content_version": "redacted-v1"},
+            "content_sha256": "b427bae502f027d260fca002be3e31606bb057e03c21ba4b9dc597a21f22fd96",
+            "size": {"chars": 16, "tokens_estimated": 4},
+            "authority": {},
+            "evidence": {},
+            "replay": {"status": "REPLAYABLE", "method": "READ_FILE", "locator": "src/parser.py"},
+            "supersession": {"status": "CURRENT", "superseded_by": null},
+            "recency": {"turn_distance": 1}
+          }
+        ],
+        "view": {"head_chars": 32}
+      },
+      "payloads": {"ctx-1": "safe parser note"},
+      "answers": {
+        "ctx-1": {
+          "keep_awareness": {"probability": 0.90},
+          "keep_full": {"probability": 0.10},
+          "replay_needed": {"probability": 0.20}
+        }
+      },
+      "gold_actions": {"ctx-1": "KEEP_REF"}
+    }
+  ]
+}

@@ -64,3 +64,9 @@ A deployment-specific adapter can still violate these boundaries if it deliberat
 ## Conclusion
 
 The portable AET implementation is approved for experimental Context Reflex research with minimized metadata and synthetic offline CI. Full proprietary payload transfer remains opt-in/outside the default contract, and no live calibration or production privacy claim is made by fixture CI.
+
+## JEV v2 semantic capsule boundary
+
+Remote semantic capsules are disabled unless the Context View explicitly enables them. When enabled, MARGOS locally verifies the exact payload hash, takes only a bounded exact prefix (maximum 512 characters in the current policy), hashes the derived capsule, and suppresses the capsule if the prefix matches committed secret patterns. The provider projection still replaces canonical local item IDs with batch-local keys and never receives the full payload by default.
+
+Redacted trace evaluation is local/offline in CI. The committed trace fixture is synthetic, requires `redacted=true`, and is secret-scanned. Real Codex traces are operator-supplied local inputs and are not repository artifacts.

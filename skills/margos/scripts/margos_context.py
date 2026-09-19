@@ -6,6 +6,7 @@ import argparse
 import copy
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -37,6 +38,7 @@ THRESHOLDS = {
         "abstain_band",
         "max_items_per_batch",
         "max_projection_chars",
+        "max_semantic_capsule_chars",
         "provider_failure_action",
     )
 }
@@ -136,6 +138,15 @@ POLICY_DETAILS = {
     "MARGOS-CTX-POL-004": "Explicitly superseded replayable evidence may leave the derived view.",
     "MARGOS-CTX-POL-005": "Current replayable unprotected evidence keeps a structured reference.",
 }
+SECRET_PATTERNS = (
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+    re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}"),
+    re.compile(r"\bTYPESAFE_API_KEY\s*="),
+    re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"),
+    re.compile(r"\b" + "gh" + r"p_[A-Za-z0-9]{20,}"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+)
 
 
 def _canon(value: Any) -> str:
@@ -158,6 +169,10 @@ def _hash_text(value: str) -> str:
 
 def question_set_sha256() -> str:
     return _hash_json(QUESTION_DOC)
+
+
+def threshold_policy_sha256() -> str:
+    return _hash_json(THRESHOLD_DOC)
 
 
 def _clip(value: Any, limit: int) -> str:
@@ -291,6 +306,15 @@ def normalize_state(raw: Mapping[str, Any]) -> dict[str, Any]:
     head_chars = int(view.get("head_chars", 512))
     if head_chars <= 0:
         raise ValueError("head_chars must be positive")
+    remote_capsule = view.get("remote_semantic_capsule_allowed", False)
+    if not isinstance(remote_capsule, bool):
+        raise ValueError("remote_semantic_capsule_allowed must be boolean")
+    capsule_chars = int(view.get("semantic_capsule_chars", 0))
+    max_capsule = int(THRESHOLDS["max_semantic_capsule_chars"])
+    if capsule_chars < 0 or capsule_chars > max_capsule:
+        raise ValueError("semantic_capsule_chars exceeds deterministic policy budget")
+    if capsule_chars and not remote_capsule:
+        raise ValueError("semantic_capsule_chars requires remote_semantic_capsule_allowed")
     return {
         "schema_version": STATE_VERSION,
         "task": {
@@ -298,7 +322,11 @@ def normalize_state(raw: Mapping[str, Any]) -> dict[str, Any]:
             for key in ("task_id", "objective", "verification_obligation")
         },
         "items": items,
-        "view": {"head_chars": head_chars},
+        "view": {
+            "head_chars": head_chars,
+            "remote_semantic_capsule_allowed": remote_capsule,
+            "semantic_capsule_chars": capsule_chars,
+        },
     }
 
 
@@ -413,10 +441,37 @@ def rehydrate_item(
     return content
 
 
-def _candidate_projection(
-    item: Mapping[str, Any], decision: Mapping[str, Any]
-) -> dict[str, Any]:
+def _semantic_capsule(
+    item: Mapping[str, Any],
+    state: Mapping[str, Any],
+    payloads: Mapping[str, str] | None,
+) -> dict[str, Any] | None:
+    view = state["view"]
+    if (
+        not view["remote_semantic_capsule_allowed"]
+        or int(view["semantic_capsule_chars"]) <= 0
+        or payloads is None
+    ):
+        return None
+    payload = _exact_payload(item, payloads)
+    text = payload[: int(view["semantic_capsule_chars"])]
+    if any(pattern.search(text) for pattern in SECRET_PATTERNS):
+        return None
     return {
+        "kind": "EXACT_PREFIX",
+        "text": text,
+        "characters": len(text),
+        "sha256": _hash_text(text),
+    }
+
+
+def _candidate_projection(
+    item: Mapping[str, Any],
+    decision: Mapping[str, Any],
+    state: Mapping[str, Any],
+    payloads: Mapping[str, str] | None,
+) -> dict[str, Any]:
+    projected = {
         "item_id": item["item_id"],
         "kind": item["kind"],
         "source": {
@@ -438,11 +493,16 @@ def _candidate_projection(
         "recency": copy.deepcopy(item["recency"]),
         "admissible_actions": list(decision["admissible_actions"]),
     }
+    capsule = _semantic_capsule(item, state, payloads)
+    if capsule is not None:
+        projected["semantic_capsule"] = capsule
+    return projected
 
 
 def build_context_reflex_request(
     state: Mapping[str, Any],
     candidates: list[tuple[Mapping[str, Any], Mapping[str, Any]]],
+    payloads: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": CONTEXT_REFLEX_REQUEST_VERSION,
@@ -453,16 +513,18 @@ def build_context_reflex_request(
             ),
         },
         "candidates": [
-            _candidate_projection(item, decision)
+            _candidate_projection(item, decision, state, payloads)
             for item, decision in candidates
         ],
         "question_set_sha256": question_set_sha256(),
+        "threshold_policy_sha256": threshold_policy_sha256(),
     }
 
 
 def _candidate_batches(
     state: Mapping[str, Any],
     candidates: list[tuple[Mapping[str, Any], Mapping[str, Any]]],
+    payloads: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     max_items = int(THRESHOLDS["max_items_per_batch"])
     max_chars = int(THRESHOLDS["max_projection_chars"])
@@ -472,17 +534,16 @@ def _candidate_batches(
     current: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
     for pair in candidates:
         trial = current + [pair]
-        request = build_context_reflex_request(state, trial)
+        request = build_context_reflex_request(state, trial, payloads)
         exceeds = len(trial) > max_items or len(_canon(request)) > max_chars
         if current and exceeds:
-            batches.append(build_context_reflex_request(state, current))
+            batches.append(build_context_reflex_request(state, current, payloads))
             current = [pair]
         else:
             current = trial
     if current:
-        batches.append(build_context_reflex_request(state, current))
+        batches.append(build_context_reflex_request(state, current, payloads))
     return batches
-
 
 def _probability(value: Any, name: str) -> float:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
@@ -552,6 +613,7 @@ def evaluate_context_reflex(
     state: Mapping[str, Any],
     baseline_decisions: list[Mapping[str, Any]],
     provider: routing_core.ReflexProvider | None,
+    payloads: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     item_by_id = {item["item_id"]: item for item in state["items"]}
     candidates = [
@@ -578,7 +640,7 @@ def evaluate_context_reflex(
             "items_evaluated": 0,
         }
 
-    batches = _candidate_batches(state, candidates)
+    batches = _candidate_batches(state, candidates, payloads)
     all_answers: dict[str, Any] = {}
     aggregate_usage: dict[str, int] = {}
     request_count = 0
@@ -729,10 +791,11 @@ def compose_context_decision(
 def decide_context(
     raw_state: Mapping[str, Any],
     provider: routing_core.ReflexProvider | None = None,
+    payloads: Mapping[str, str] | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
     state = normalize_state(raw_state)
     baseline = [decide_item(item) for item in state["items"]]
-    answers, provider_meta = evaluate_context_reflex(state, baseline, provider)
+    answers, provider_meta = evaluate_context_reflex(state, baseline, provider, payloads)
     decisions = [
         compose_context_decision(
             decision,
@@ -780,7 +843,7 @@ def materialize_context_view(
         for k, v in payloads.items()
     ):
         raise ValueError("payloads must map item_id to exact text")
-    state, decisions, provider_meta = decide_context(raw_state, provider)
+    state, decisions, provider_meta = decide_context(raw_state, provider, payloads)
     state_hash = _hash_json(state)
     by_id = {d["item_id"]: d for d in decisions}
     active, rehydration_index = [], []
@@ -860,6 +923,7 @@ def materialize_context_view(
         "question_set_version": QUESTION_SET_VERSION,
         "question_set_sha256": question_set_sha256(),
         "threshold_policy_version": THRESHOLD_POLICY_VERSION,
+        "threshold_policy_sha256": threshold_policy_sha256(),
         "provider": provider_meta,
         "input": {
             "items": len(state["items"]),
@@ -900,11 +964,19 @@ def main() -> int:
         help="Live provider is explicit opt-in; API key presence alone never enables it.",
     )
     parser.add_argument("--fixture-reflex", type=Path)
+    parser.add_argument("--jev-model")
+    parser.add_argument("--calibration-binding", type=Path)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
     if args.fixture_reflex and args.reflex_provider != "none":
         parser.error("--fixture-reflex cannot be combined with a live provider")
+    if args.jev_model and args.reflex_provider != "jev":
+        parser.error("--jev-model requires --reflex-provider jev")
+    if args.calibration_binding and args.reflex_provider != "jev":
+        parser.error("--calibration-binding requires --reflex-provider jev")
+    if args.calibration_binding and not args.jev_model:
+        parser.error("--calibration-binding requires an explicit --jev-model")
 
     provider: routing_core.ReflexProvider | None = None
     if args.fixture_reflex:
@@ -914,7 +986,10 @@ def main() -> int:
     elif args.reflex_provider == "jev":
         import margos_reflex_jev
 
-        provider = margos_reflex_jev.JevReflexProvider()
+        binding = _read(args.calibration_binding) if args.calibration_binding else None
+        provider = margos_reflex_jev.JevReflexProvider(
+            model=args.jev_model, calibration_binding=binding
+        )
 
     view, receipt = materialize_context_view(
         _read(args.state), _read(args.payloads), provider

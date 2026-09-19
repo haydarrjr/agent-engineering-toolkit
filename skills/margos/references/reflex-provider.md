@@ -45,3 +45,11 @@ Do not enable a remote Reflex provider for proprietary/private state unless the 
 Issue #10 Phase 2 reuses the same `JevReflexProvider`, HTTPS endpoint, Bearer credential, timeout/error boundary, and runtime environment variables for Context Reflex. The adapter dispatches by the typed request schema; it does not create another TypeSafe client.
 
 Context requests batch multiple independent Noul judgments against one minimized state. Batch size and projected-character budgets are deterministic local contracts. CI exercises fixture and injected-transport paths only; it never enables the live Jev provider.
+
+## JEV v2 runtime and model lifecycle
+
+The normal routing CLI can explicitly select the adapter with `--reflex-provider jev`; setting `TYPESAFE_API_KEY` alone still does nothing. Routing and Context Reflex questions point to explicit state paths so the provider evaluates the intended bounded fields rather than relying on alias prose.
+
+`jev-latest` remains the research default. A calibrated run must explicitly select a pinned model and supply a `margos-jev-calibration/v1` binding that matches the provider, model, question-set hash, threshold-policy hash, projection version, frozen-corpus hash, and a recorded `PASSED` evaluation. Alias use, model drift, or contract drift yields `STALE`, not a calibration claim.
+
+Context Reflex may optionally receive a derived `semantic_capsule` only when the Context View explicitly enables remote semantic capsules. The capsule is an exact prefix of the locally hash-verified payload, bounded to the deterministic policy budget, and suppressed when secret-like material is detected. Canonical item IDs and the full payload remain excluded from the remote projection.

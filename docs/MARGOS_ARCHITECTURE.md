@@ -133,3 +133,11 @@ host runtime evidence, if any
 The frozen benchmark evaluates full-context vs deterministic Policy vs fixture Context Reflex on synthetic evidence-bound cases. Harmful omission, protected-state loss, non-replayable omission, unresolved external-effect loss, contradiction loss, verified-success, reduction, rehydration, provider usage, and probability metrics are recorded.
 
 Optional root compaction remains outside the portable authority path. The core only proposes whether to leave context untouched, defer to a proven host-native compactor, or offer an already-derived view to an explicitly enabled/proven hook. It never claims application without host runtime evidence.
+
+## Issue #16: JEV v2 Reflex control plane
+
+Issue #16 completes the next production-shaped Reflex layer without changing authority ownership. Routing now exposes explicit live-provider selection from the normal CLI and composes all seven typed routing judgments: Choice winners plus probability mass from task ambiguity, verification risk, escalation need, critic need, and transfer sufficiency. Deterministic Policy still defines the admissible envelope.
+
+Context Reflex can optionally add a privacy-bounded semantic capsule derived from a locally verified exact payload. Remote semantic content is opt-in, length-capped, secret-filtered, and never becomes canonical state. Jev questions reference concrete state paths such as `state.candidates[N]` to reduce indirection.
+
+Calibration is version-aware: research may follow `jev-latest`, while calibrated operation requires a pinned model and an explicit binding to the question set, threshold policy, projection version, and frozen corpus. Drift becomes `STALE`. A separate redacted trace harness lets maintainers evaluate representative Codex routing/context traces locally without committing private transcripts.

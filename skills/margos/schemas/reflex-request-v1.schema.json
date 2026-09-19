@@ -5,6 +5,7 @@
   "required":["schema_version","routing_state","admissible"],
   "properties":{
     "schema_version":{"const":"margos-reflex-request/v1"},
+    "threshold_policy_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
     "routing_state":{"type":"object"},
     "admissible":{
       "type":"object",

@@ -65,6 +65,7 @@ for key in ('full_threshold','awareness_threshold','replay_risk_threshold','abst
     check(isinstance(value,(int,float)) and not isinstance(value,bool) and 0<=float(value)<=1,f'invalid context threshold: {key}')
 check(isinstance(thresholds.get('max_items_per_batch'),int) and 1<=thresholds.get('max_items_per_batch',0)<=64,'invalid context max_items_per_batch')
 check(isinstance(thresholds.get('max_projection_chars'),int) and thresholds.get('max_projection_chars',0)>=1000,'invalid context max_projection_chars')
+check(isinstance(thresholds.get('max_semantic_capsule_chars'),int) and 0<thresholds.get('max_semantic_capsule_chars',0)<=512,'invalid context max_semantic_capsule_chars')
 check(thresholds.get('provider_failure_action')=='KEEP_REF','provider failure must conservatively keep a reference')
 
 decision=schemas.get('context-decision-v1.schema.json',{})
@@ -82,6 +83,8 @@ check(props.get('authority',{}).get('const')=='DERIVED_VIEW','context receipt au
 check(props.get('canonical_source_mutated',{}).get('const') is False,'context receipt must prove canonical source is not mutated')
 check(props.get('question_set_version',{}).get('const')=='margos-context-questions/v1','context receipt must bind question-set version')
 check(props.get('threshold_policy_version',{}).get('const')=='margos-context-thresholds/v1','context receipt must bind threshold-policy version')
+threshold_pattern=props.get('threshold_policy_sha256',{}).get('pattern','')
+check(threshold_pattern.startswith('^[0-9a-f]{64}'),'context receipt must bind threshold-policy hash')
 provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
 for status in ('DISABLED','AVAILABLE','NOT_CONFIGURED','ERROR'):
     check(status in provider_statuses,f'context receipt provider status missing {status}')
@@ -103,6 +106,10 @@ if kernel.is_file():
         'replay_needed',
         '--reflex-provider',
         'not_configured',
+        'remote_semantic_capsule_allowed',
+        'semantic_capsule_chars',
+        'threshold_policy_sha256',
+        'secret_patterns',
     ):
         check(token in text,f'MARGOS context kernel missing {token}')
     for forbidden in ('import requests','import httpx','urllib.request','session.compact','claude'):
@@ -112,7 +119,7 @@ adapter=MARGOS/'scripts/margos_reflex_jev.py'
 check(adapter.is_file(),'missing shared Jev Reflex adapter')
 if adapter.is_file():
     text=adapter.read_text(encoding='utf-8')
-    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count'):
+    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','state.candidates['):
         check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
     check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
     check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')

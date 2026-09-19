@@ -254,6 +254,51 @@ class ContextReflexTests(unittest.TestCase):
         self.assertEqual(receipt["provider"]["request_count"], 0)
         self.assertEqual(receipt["provider"]["network_request_count"], 0)
 
+    def test_semantic_capsule_is_bounded_and_uses_explicit_state_path(self):
+        seen = {}
+        text = "parser failure: expected token near closing bracket"
+
+        def transport(base, key, payload, timeout):
+            seen["payload"] = payload
+            return fake_jev_response(payload)
+
+        raw_state = state([item("candidate", text, locator="src/parser.py")])
+        raw_state["view"].update(
+            {
+                "remote_semantic_capsule_allowed": True,
+                "semantic_capsule_chars": 24,
+            }
+        )
+        provider = jev.JevReflexProvider(api_key="test-key", transport=transport)
+        ctx.materialize_context_view(raw_state, {"candidate": text}, provider)
+        candidate = seen["payload"]["state"]["candidates"][0]
+        self.assertEqual(candidate["semantic_capsule"]["text"], text[:24])
+        self.assertEqual(candidate["semantic_capsule"]["characters"], 24)
+        self.assertEqual(len(candidate["semantic_capsule"]["sha256"]), 64)
+        for question in seen["payload"]["questions"].values():
+            self.assertIn("state.candidates[0]", question["instructions"])
+
+    def test_semantic_capsule_suppresses_secret_like_prefix(self):
+        seen = {}
+        text = "sk-" + ("A" * 24) + " parser context"
+
+        def transport(base, key, payload, timeout):
+            seen["payload"] = payload
+            return fake_jev_response(payload)
+
+        raw_state = state([item("candidate", text, locator="src/parser.py")])
+        raw_state["view"].update(
+            {
+                "remote_semantic_capsule_allowed": True,
+                "semantic_capsule_chars": 40,
+            }
+        )
+        provider = jev.JevReflexProvider(api_key="test-key", transport=transport)
+        ctx.materialize_context_view(raw_state, {"candidate": text}, provider)
+        candidate = seen["payload"]["state"]["candidates"][0]
+        self.assertNotIn("semantic_capsule", candidate)
+        self.assertNotIn(text, json.dumps(seen["payload"]))
+
     def test_existing_jev_transport_handles_context_reflex(self):
         seen = {}
 

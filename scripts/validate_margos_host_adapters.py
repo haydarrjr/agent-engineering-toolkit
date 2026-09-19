@@ -29,7 +29,7 @@ for name in ('question-set-v1.json','threshold-policy-v1.json'):
         try: json.loads(path.read_text(encoding='utf-8'))
         except json.JSONDecodeError as exc: errors.append(f'invalid contract {name}: {exc}')
 
-for name in ('routing-state-v1.schema.json','reflex-request-v1.schema.json','reflex-result-v1.schema.json','route-decision-v1.schema.json','route-receipt-v1.schema.json'):
+for name in ('routing-state-v1.schema.json','reflex-request-v1.schema.json','reflex-result-v1.schema.json','route-decision-v1.schema.json','route-receipt-v1.schema.json','jev-calibration-binding-v1.schema.json'):
     path=MARGOS/'schemas'/name
     check(path.is_file(),f'missing MARGOS schema: {name}')
     if path.is_file():
@@ -40,7 +40,7 @@ kernel=MARGOS/'scripts/margos_decide.py'
 check(kernel.is_file(),'missing deterministic MARGOS decision kernel')
 if kernel.is_file():
     text=kernel.read_text(encoding='utf-8').lower()
-    for token in ('coordination','disposition','computetier','role','reflexprovider','margos-pol-001','decision_authority'):
+    for token in ('coordination','disposition','computetier','role','reflexprovider','margos-pol-001','decision_authority','--reflex-provider','semantic_escalation','threshold_policy_sha256'):
         check(token in text,f'MARGOS decision kernel missing {token}')
     for forbidden in ('import requests','import httpx','urllib.request','typesafe','api_key'):
         check(forbidden not in text,f'phase-2 kernel must not add remote provider coupling: {forbidden}')
@@ -53,6 +53,8 @@ if adapter.is_file():
     check('TYPESAFE_API_KEY' in text,'Jev adapter must read runtime key from environment')
     check('urllib.request' in text,'Jev adapter must remain stdlib-only')
     check('import requests' not in text and 'import httpx' not in text,'Jev adapter must not add third-party HTTP dependencies')
+    for token in ('ROUTING_PROJECTION_VERSION','CONTEXT_PROJECTION_VERSION','CALIBRATION_BINDING_VERSION','state.candidates['):
+        check(token in text,f'Jev adapter missing v2 contract: {token}')
 check((ROOT/'scripts/benchmark_margos_routing.py').is_file(),'missing MARGOS routing benchmark')
 check((ROOT/'docs/MARGOS_RESEARCH.md').is_file(),'missing MARGOS research record')
 check((ROOT/'docs/MARGOS_EVALUATION.md').is_file(),'missing MARGOS evaluation record')

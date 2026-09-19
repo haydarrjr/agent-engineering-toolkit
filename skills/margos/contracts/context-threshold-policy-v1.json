@@ -6,5 +6,6 @@
   "abstain_band": 0.08,
   "max_items_per_batch": 8,
   "max_projection_chars": 12000,
+  "max_semantic_capsule_chars": 512,
   "provider_failure_action": "KEEP_REF"
 }

@@ -4,7 +4,13 @@ All notable project changes are documented here.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-19
+
 ### Added
+- MARGOS JEV v2 runtime routing: explicit live Reflex provider selection on the normal routing CLI, probability-derived semantic escalation, direct Jev state-path questions, pinned-model calibration bindings, and stale-calibration detection.
+- Privacy-safe semantic Context Reflex capsules: explicit remote opt-in, exact-prefix derivation, SHA-256 binding, deterministic 512-character cap, and secret-like prefix suppression.
+- Redacted Codex/MARGOS trace benchmark format, schema, fixture, CI gate, and routing/context metrics for local preflight without committing private transcripts.
+
 - MARGOS vNext three-layer Policy -> Reflex -> Execution contracts with versioned routing-state, Reflex, decision, and route-receipt schemas.
 - Optional stdlib TypeSafe Jev Reflex adapter with minimized state projection, typed fail-closed fallback, and no mandatory API key/dependency.
 - Frozen MARGOS routing benchmark with authority-boundary, keyword-noise, fallback, escalation, serialization, and abstention coverage.
@@ -14,10 +20,17 @@ All notable project changes are documented here.
 - MARGOS Context Governor Phase 4 frozen counterfactual benchmark, false-omit/rehydration/calibration metrics, privacy review, live Jev research mode, and optional host-neutral root-compaction proposal contract.
 
 ### Changed
+- Routing composition now uses high-mass task-ambiguity and verification-risk distributions together with the explicit escalation probability instead of leaving those two Jev signals telemetry-only.
+- Context Jev questions now reference explicit `state.candidates[N]` paths; calibrated deployments can bind model, question set, threshold policy, projection version, and corpus hash.
+
 - MARGOS now separates coordination shape, disposition, compute tier, and child role instead of conflating critic role with compute.
 - Codex and Copilot adapters consume proposed abstract routes while still requiring host runtime evidence before claiming delegated execution.
 
 ### Security / boundaries
+- Semantic capsules remain disabled by default and never mutate canonical evidence; private/full payload upload is still not a portable default.
+- Calibration claims require an explicit pinned model plus a matching PASSED binding; aliases such as `jev-latest` are treated as stale for calibrated operation.
+- Redacted trace inputs must declare `redacted=true` and pass committed secret-pattern checks.
+
 - Reflex output cannot prove host capability or widen permissions.
 - Remote Reflex projection omits host identity and literal model/provider constraint values.
 - CI never requires a TypeSafe credential or live external model call.

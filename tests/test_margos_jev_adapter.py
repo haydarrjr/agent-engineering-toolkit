@@ -19,6 +19,18 @@ def state(**updates):
     for section,patch in updates.items(): value[section].update(patch)
     return value
 
+def calibration_binding(model='jev-1.13.0'):
+    return {
+      'version':jev.CALIBRATION_BINDING_VERSION,
+      'provider':'typesafe-jev',
+      'model':model,
+      'question_set_sha256':core.question_set_sha256(),
+      'threshold_policy_sha256':core.threshold_policy_sha256(),
+      'projection_version':jev.ROUTING_PROJECTION_VERSION,
+      'corpus_sha256':'a'*64,
+      'evaluation_status':'PASSED',
+    }
+
 def fake_response(payload):
     q=payload['questions']
     answers={}
@@ -50,6 +62,13 @@ class JevAdapterTests(unittest.TestCase):
         payload=jev.build_jev_payload(core.build_reflex_request(pre),core.QUESTION_SET)
         self.assertNotIn('DELEGATED',payload['questions']['coordination_preference']['criteria'])
 
+    def test_routing_questions_reference_explicit_state_paths(self):
+        pre=core.policy_pre_evaluate(state())
+        payload=jev.build_jev_payload(core.build_reflex_request(pre),core.QUESTION_SET)
+        self.assertIn('state.task',payload['questions']['coordination_preference']['instructions'])
+        self.assertIn('state.admissible.compute',payload['questions']['compute_preference']['instructions'])
+        self.assertIn('state.task.verification_obligation',payload['questions']['verification_risk']['instructions'])
+
     def test_policy_restricted_jev_result_still_validates(self):
         pre=core.policy_pre_evaluate(state(work_shape={'overlapping_write_scopes':True}))
         provider=jev.JevReflexProvider(api_key='test-key',transport=lambda b,k,p,t: fake_response(p))
@@ -73,6 +92,31 @@ class JevAdapterTests(unittest.TestCase):
         self.assertAlmostEqual(validated['answers']['needs_escalation']['probability'],.08)
         self.assertEqual(seen['base'],'https://api.typesafe.ai')
         self.assertEqual(seen['key'],'test-key')
+
+    def test_pinned_matching_calibration_binding_is_recognized(self):
+        pre=core.policy_pre_evaluate(state())
+        provider=jev.JevReflexProvider(
+            api_key='test-key',
+            model='jev-1.13.0',
+            calibration_binding=calibration_binding(),
+            transport=lambda b,k,p,t: fake_response(p),
+        )
+        result=provider.evaluate(core.build_reflex_request(pre),core.QUESTION_SET)
+        self.assertEqual(result['provider']['calibration_status'],'CALIBRATED_FOR_FROZEN_SUITE')
+        self.assertEqual(result['provider']['projection_version'],jev.ROUTING_PROJECTION_VERSION)
+        self.assertIn('calibration_binding_sha256',result['provider'])
+
+    def test_alias_or_changed_binding_is_stale(self):
+        pre=core.policy_pre_evaluate(state())
+        binding=calibration_binding('jev-latest')
+        provider=jev.JevReflexProvider(
+            api_key='test-key',
+            model='jev-latest',
+            calibration_binding=binding,
+            transport=lambda b,k,p,t: fake_response(p),
+        )
+        result=provider.evaluate(core.build_reflex_request(pre),core.QUESTION_SET)
+        self.assertEqual(result['provider']['calibration_status'],'STALE')
 
     def test_missing_key_falls_back_without_network(self):
         called=False

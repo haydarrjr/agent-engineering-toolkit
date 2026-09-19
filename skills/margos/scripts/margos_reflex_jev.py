@@ -7,6 +7,7 @@ network I/O when TYPESAFE_API_KEY is absent.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import urllib.error
@@ -20,6 +21,9 @@ DEFAULT_BASE_URL = "https://api.typesafe.ai"
 DEFAULT_MODEL = "jev-latest"
 CONTEXT_REQUEST_VERSION = "margos-context-reflex-request/v1"
 CONTEXT_RESULT_VERSION = "margos-context-reflex-result/v1"
+ROUTING_PROJECTION_VERSION = "margos-jev-routing-projection/v2"
+CONTEXT_PROJECTION_VERSION = "margos-jev-context-projection/v2"
+CALIBRATION_BINDING_VERSION = "margos-jev-calibration/v1"
 Transport = Callable[[str, str, Mapping[str, Any], float], Mapping[str, Any]]
 
 _COORDINATION = {
@@ -56,6 +60,64 @@ class JevAdapterError(ValueError):
 def _clip(value: Any, limit: int = 6000) -> str:
     text = str(value or "")
     return text if len(text) <= limit else text[:limit]
+
+
+def _canon(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+
+def _hash_json(value: Any) -> str:
+    return hashlib.sha256(_canon(value).encode()).hexdigest()
+
+
+def _projection_version(request: Mapping[str, Any]) -> str:
+    if request.get("schema_version") == CONTEXT_REQUEST_VERSION:
+        return CONTEXT_PROJECTION_VERSION
+    if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
+        return ROUTING_PROJECTION_VERSION
+    raise JevAdapterError("unsupported Reflex request schema")
+
+
+def _threshold_hash_for_request(request: Mapping[str, Any]) -> str:
+    value = request.get("threshold_policy_sha256")
+    if isinstance(value, str) and len(value) == 64:
+        return value
+    if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
+        return core.threshold_policy_sha256()
+    raise JevAdapterError("Reflex request missing threshold-policy hash")
+
+
+def _calibration_metadata(
+    raw: Mapping[str, Any],
+    request: Mapping[str, Any],
+    model: str,
+    binding: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    meta = {"calibration_status": "UNCALIBRATED"}
+    if binding is None:
+        return meta
+    meta["calibration_binding_sha256"] = _hash_json(binding)
+    required = {
+        "version": CALIBRATION_BINDING_VERSION,
+        "provider": "typesafe-jev",
+        "model": model,
+        "question_set_sha256": _question_hash_for_request(request),
+        "threshold_policy_sha256": _threshold_hash_for_request(request),
+        "projection_version": _projection_version(request),
+        "evaluation_status": "PASSED",
+    }
+    corpus = binding.get("corpus_sha256")
+    pinned = model != DEFAULT_MODEL and "latest" not in model.lower()
+    response_model = raw.get("model")
+    matches = all(binding.get(k) == v for k, v in required.items())
+    valid_corpus = isinstance(corpus, str) and len(corpus) == 64 and all(ch in "0123456789abcdef" for ch in corpus)
+    response_matches = not isinstance(response_model, str) or response_model == model
+    meta["calibration_status"] = (
+        "CALIBRATED_FOR_FROZEN_SUITE"
+        if pinned and matches and valid_corpus and response_matches
+        else "STALE"
+    )
+    return meta
 
 
 def _question_hash_for_request(request: Mapping[str, Any]) -> str:
@@ -156,8 +218,7 @@ def project_context_reflex_state(
         source = candidate.get("source", {})
         if not isinstance(source, Mapping):
             raise JevAdapterError("invalid Context Reflex source metadata")
-        projected["candidates"].append(
-            {
+        projected_candidate = {
                 "candidate_key": key,
                 "kind": _clip(candidate.get("kind"), 128),
                 "source": {
@@ -177,7 +238,15 @@ def project_context_reflex_state(
                     candidate.get("admissible_actions", [])
                 ),
             }
-        )
+        capsule = candidate.get("semantic_capsule")
+        if isinstance(capsule, Mapping):
+            projected_candidate["semantic_capsule"] = {
+                "kind": _clip(capsule.get("kind"), 32),
+                "text": _clip(capsule.get("text"), 512),
+                "characters": int(capsule.get("characters", 0)),
+                "sha256": _clip(capsule.get("sha256"), 64),
+            }
+        projected["candidates"].append(projected_candidate)
     return projected, mapping
 
 
@@ -192,9 +261,14 @@ def _choice_question(
         if question["id"] == "coordination_preference"
         else _COMPUTE
     )
+    path = (
+        "state.task, state.work_shape, state.evidence, state.admissible.coordination"
+        if question["id"] == "coordination_preference"
+        else "state.task, state.evidence, state.budget, state.admissible.compute"
+    )
     return {
         "type": "choice",
-        "instructions": question["criterion"],
+        "instructions": f"Use {path}. {question['criterion']}",
         "criteria": {x: descriptions[x] for x in options},
     }
 
@@ -218,15 +292,25 @@ def _build_routing_payload(
             if item is not None:
                 payload_questions[qid] = item
         elif question["kind"] == "score":
+            path = (
+                "state.task.objective, state.task.requested_outcome, state.task.verification_obligation"
+                if qid == "task_ambiguity"
+                else "state.task.verification_obligation, state.evidence, state.admissible.compute"
+            )
             payload_questions[qid] = {
                 "type": "score",
-                "instructions": question["criterion"],
+                "instructions": f"Use {path}. {question['criterion']}",
                 "criteria": _SCORE_LEVELS[qid],
             }
         elif question["kind"] == "noul":
+            paths = {
+                "needs_escalation": "state.task, state.evidence, state.budget, state.admissible.compute",
+                "needs_independent_critic": "state.task.verification_obligation, state.evidence, state.admissible.coordination",
+                "transfer_sufficient": "state.task, state.work_shape, state.admissible.coordination",
+            }
             payload_questions[qid] = {
                 "type": "noul",
-                "instructions": question["criterion"],
+                "instructions": f"Use {paths[qid]}. {question['criterion']}",
             }
         else:
             raise JevAdapterError(
@@ -242,7 +326,8 @@ def _build_context_payload(
 ) -> dict[str, Any]:
     state, mapping = project_context_reflex_state(request)
     payload_questions = {}
-    for candidate_key, _ in mapping:
+    for index, (candidate_key, _) in enumerate(mapping):
+        candidate_path = f"state.candidates[{index}]"
         for question in questions:
             if question.get("kind") != "noul":
                 raise JevAdapterError(
@@ -252,7 +337,7 @@ def _build_context_payload(
             payload_questions[f"{candidate_key}_{qid}"] = {
                 "type": "noul",
                 "instructions": (
-                    f"For candidate {candidate_key}: {question['criterion']}"
+                    f"Evaluate {candidate_path} against state.task. {question['criterion']}"
                 ),
                 "criteria": {
                     "true": question.get("true"),
@@ -356,16 +441,19 @@ def _noul_answer(raw: Mapping[str, Any]) -> dict[str, Any]:
 
 def _provider_meta(
     raw: Mapping[str, Any],
+    request: Mapping[str, Any],
     model: str,
+    binding: Mapping[str, Any] | None,
     *,
     network_request_count: int,
 ) -> dict[str, Any]:
     provider = {
         "kind": "typesafe-jev",
         "status": "AVAILABLE",
-        "calibration_status": "UNCALIBRATED",
         "requested_model": model,
+        "projection_version": _projection_version(request),
         "network_request_count": network_request_count,
+        **_calibration_metadata(raw, request, model, binding),
     }
     if isinstance(raw.get("model"), str):
         provider["response_model"] = raw["model"]
@@ -379,6 +467,7 @@ def _to_routing_result(
     request: Mapping[str, Any],
     questions: tuple[dict[str, Any], ...],
     model: str,
+    binding: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     answers_raw = raw.get("answers")
     if not isinstance(answers_raw, Mapping):
@@ -431,7 +520,7 @@ def _to_routing_result(
             answers[qid] = _noul_answer(item)
     return {
         "schema_version": "margos-reflex-result/v1",
-        "provider": _provider_meta(raw, model, network_request_count=1),
+        "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
         "question_set_sha256": core.question_set_sha256(),
         "answers": answers,
     }
@@ -442,6 +531,7 @@ def _to_context_result(
     request: Mapping[str, Any],
     questions: tuple[dict[str, Any], ...],
     model: str,
+    binding: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     answers_raw = raw.get("answers")
     if not isinstance(answers_raw, Mapping):
@@ -460,7 +550,7 @@ def _to_context_result(
             answers[item_id][qid] = _noul_answer(raw_answer)
     return {
         "schema_version": CONTEXT_RESULT_VERSION,
-        "provider": _provider_meta(raw, model, network_request_count=1),
+        "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
         "question_set_sha256": _question_hash_for_request(request),
         "answers": answers,
     }
@@ -471,12 +561,13 @@ def to_reflex_result(
     request: Mapping[str, Any],
     questions: tuple[dict[str, Any], ...],
     model: str,
+    binding: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     schema = request.get("schema_version")
     if schema == core.REFLEX_REQUEST_VERSION:
-        return _to_routing_result(raw, request, questions, model)
+        return _to_routing_result(raw, request, questions, model, binding)
     if schema == CONTEXT_REQUEST_VERSION:
-        return _to_context_result(raw, request, questions, model)
+        return _to_context_result(raw, request, questions, model, binding)
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -487,6 +578,7 @@ class JevReflexProvider:
     model: str | None = None
     timeout: float = 15.0
     transport: Transport | None = None
+    calibration_binding: Mapping[str, Any] | None = None
 
     def evaluate(
         self,
@@ -526,7 +618,9 @@ class JevReflexProvider:
             raw = (self.transport or _http_transport)(
                 base, key, payload, float(self.timeout)
             )
-            return to_reflex_result(raw, request, questions, model)
+            return to_reflex_result(
+                raw, request, questions, model, self.calibration_binding
+            )
         except (JevAdapterError, KeyError, TypeError, ValueError) as exc:
             return {
                 "schema_version": result_version,
