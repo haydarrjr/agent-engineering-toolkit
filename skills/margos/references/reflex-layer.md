@@ -20,6 +20,13 @@ Phase 2 contains only a provider `Protocol` plus a deterministic fixture provide
 
 ## Context Reflex boundary
 
-MARGOS Reflex now has two decision families: Routing Reflex and Context Reflex. Issue #10 Phase 1 implements only deterministic Context Policy and the derived-view materializer. It makes no Context Reflex provider call.
+MARGOS Reflex has two decision families: Routing Reflex and Context Reflex.
 
-A later Context Reflex may estimate keep-awareness, keep-full, and replay-needed only for Policy-eligible items. It cannot decide replayability, permission, authorization, evidence truth, or canonical deletion.
+Issue #10 Phase 2 adds three atomic Context Reflex Noul judgments for Policy-eligible replayable items:
+- `keep_awareness`;
+- `keep_full`;
+- `replay_needed`.
+
+Deterministic composition applies versioned thresholds and an abstention band. Low-margin, malformed, unavailable, or missing-key provider outcomes prefer `KEEP_REF` over omission. Protected/non-replayable items never enter the provider candidate set.
+
+Context Reflex reuses the existing `ReflexProvider` contract and TypeSafe/Jev transport. It cannot decide replayability, permission, authorization, evidence truth, protected-item status, external-effect replay, or canonical deletion.

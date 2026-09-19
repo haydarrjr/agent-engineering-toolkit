@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Reflex Request v1",
+  "type": "object",
+  "required": ["schema_version", "task", "candidates", "question_set_sha256"],
+  "properties": {
+    "schema_version": {"const": "margos-context-reflex-request/v1"},
+    "task": {
+      "type": "object",
+      "required": ["objective", "verification_obligation"],
+      "properties": {
+        "objective": {"type": "string"},
+        "verification_obligation": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["item_id", "kind", "source", "size", "evidence", "replay", "supersession", "recency", "admissible_actions"],
+        "properties": {
+          "item_id": {"type": "string", "minLength": 1},
+          "kind": {"type": "string"},
+          "source": {"type": "object"},
+          "size": {"type": "object"},
+          "evidence": {"type": "object"},
+          "replay": {"type": "object"},
+          "supersession": {"type": "object"},
+          "recency": {"type": "object"},
+          "admissible_actions": {
+            "type": "array",
+            "items": {"enum": ["KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]}
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

@@ -2,21 +2,27 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MARGOS Context Decision v1",
   "type": "object",
-  "required": ["schema_version", "item_id", "protection_class", "action", "admissible_actions", "policy_rules_applied", "rehydration", "superseded_by"],
+  "required": ["schema_version", "item_id", "protection_class", "action", "admissible_actions", "policy_rules_applied", "rehydration", "superseded_by", "decision_source", "reflex"],
   "properties": {
     "schema_version": {"const": "margos-context-decision/v1"},
     "item_id": {"type": "string", "minLength": 1},
     "protection_class": {"enum": ["PINNED", "ELIGIBLE", "NO_REMOTE_EVAL", "NON_REPLAYABLE", "STALE_BUT_REQUIRED", "SUPERSEDED"]},
     "action": {"enum": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]},
     "admissible_actions": {
-      "type": "array", "minItems": 1, "uniqueItems": true,
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
       "items": {"enum": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD", "OMIT_REHYDRATABLE"]}
     },
     "policy_rules_applied": {
       "type": "array",
       "items": {
-        "type": "object", "required": ["rule_id", "detail"],
-        "properties": {"rule_id": {"type": "string"}, "detail": {"type": "string"}},
+        "type": "object",
+        "required": ["rule_id", "detail"],
+        "properties": {
+          "rule_id": {"type": "string"},
+          "detail": {"type": "string"}
+        },
         "additionalProperties": false
       }
     },
@@ -33,7 +39,20 @@
       },
       "additionalProperties": false
     },
-    "superseded_by": {"type": ["string", "null"]}
+    "superseded_by": {"type": ["string", "null"]},
+    "decision_source": {"enum": ["DETERMINISTIC_POLICY", "DETERMINISTIC_BASELINE", "REFLEX_ASSISTED", "REFLEX_CONSERVATIVE_FALLBACK"]},
+    "reflex": {
+      "type": "object",
+      "required": ["status", "keep_awareness", "keep_full", "replay_needed", "abstained"],
+      "properties": {
+        "status": {"enum": ["NOT_ELIGIBLE", "DISABLED", "NOT_NEEDED", "AVAILABLE", "NOT_CONFIGURED", "ERROR"]},
+        "keep_awareness": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "keep_full": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "replay_needed": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "abstained": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }

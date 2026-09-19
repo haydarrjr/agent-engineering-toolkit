@@ -52,3 +52,28 @@ Route receipts remain `PROPOSED`; host execution and task correctness require se
 ## CI boundary
 
 Repository CI validates the deterministic fixture suite only. It never consumes `TYPESAFE_API_KEY`, never makes a live Jev request, and therefore cannot be cited as live-provider calibration evidence.
+
+
+## Context Reflex Phase 2
+
+Context Reflex is evaluated separately from routing. Phase 2 CI covers:
+- deterministic protected-item admission;
+- fixture `keep_awareness` / `keep_full` / `replay_needed` composition;
+- low-margin abstention to conservative retention;
+- provider-error and missing-key fallback;
+- explicit batching budgets;
+- minimized Jev context projection with no raw payload;
+- the invariant that an environment API key alone does not activate Context Reflex.
+
+Live Context Reflex is research-only and explicit opt-in:
+
+```bash
+TYPESAFE_API_KEY=... python skills/margos/scripts/margos_context.py \
+  --state state.json \
+  --payloads payloads.json \
+  --reflex-provider jev
+```
+
+Without `--reflex-provider jev`, no live provider is selected even when the environment contains a key. If Jev is selected without a key, the typed provider state is `NOT_CONFIGURED` and the adapter performs zero network requests.
+
+Phase 2 fixture tests establish contract behavior, not live calibration. Full-vs-compacted counterfactual evaluation, false-omit metrics, and live calibration remain Phase 4 work.

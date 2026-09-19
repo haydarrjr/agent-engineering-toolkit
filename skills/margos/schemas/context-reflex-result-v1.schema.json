@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Reflex Result v1",
+  "type": "object",
+  "required": ["schema_version", "provider", "question_set_sha256", "answers"],
+  "properties": {
+    "schema_version": {"const": "margos-context-reflex-result/v1"},
+    "provider": {
+      "type": "object",
+      "required": ["kind", "status"],
+      "properties": {
+        "kind": {"type": "string"},
+        "status": {"enum": ["AVAILABLE", "NOT_CONFIGURED", "ERROR"]},
+        "calibration_status": {"type": "string"},
+        "requested_model": {"type": "string"},
+        "response_model": {"type": "string"},
+        "network_request_count": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "answers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["keep_awareness", "keep_full", "replay_needed"],
+        "properties": {
+          "keep_awareness": {"type": "object", "required": ["probability"], "properties": {"probability": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false},
+          "keep_full": {"type": "object", "required": ["probability"], "properties": {"probability": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false},
+          "replay_needed": {"type": "object", "required": ["probability"], "properties": {"probability": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": false}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

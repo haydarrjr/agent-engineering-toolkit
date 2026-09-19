@@ -9,6 +9,7 @@ All notable project changes are documented here.
 - Optional stdlib TypeSafe Jev Reflex adapter with minimized state projection, typed fail-closed fallback, and no mandatory API key/dependency.
 - Frozen MARGOS routing benchmark with authority-boundary, keyword-noise, fallback, escalation, serialization, and abstention coverage.
 - Research and evaluation documentation covering Jev inspiration, routing/cascade literature, calibration, and selective deferral.
+- MARGOS Context Governor Phase 1 deterministic retention/rehydration contracts and Phase 2 optional Context Reflex with atomic Noul judgments, batching, minimized remote projection, and conservative fallback.
 
 ### Changed
 - MARGOS now separates coordination shape, disposition, compute tier, and child role instead of conflating critic role with compute.
@@ -18,6 +19,7 @@ All notable project changes are documented here.
 - Reflex output cannot prove host capability or widen permissions.
 - Remote Reflex projection omits host identity and literal model/provider constraint values.
 - CI never requires a TypeSafe credential or live external model call.
+- Context Reflex is explicit opt-in: API-key presence alone does not enable it, missing-key selection performs zero network requests, and raw context payloads are excluded from the remote projection.
 
 ### Planned
 - Gather external installation and compatibility reports.

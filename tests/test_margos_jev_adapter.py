@@ -81,7 +81,7 @@ class JevAdapterTests(unittest.TestCase):
             raise AssertionError('network should not run')
         receipt=core.decide(state(),jev.JevReflexProvider(api_key='',transport=transport))
         self.assertFalse(called)
-        self.assertEqual(receipt['provider']['status'],'ERROR')
+        self.assertEqual(receipt['provider']['status'],'NOT_CONFIGURED')
         self.assertEqual(receipt['selected']['coordination'],'DIRECT')
         self.assertTrue(receipt['selected']['abstained'])
 

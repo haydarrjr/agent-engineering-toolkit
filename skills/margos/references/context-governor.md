@@ -17,7 +17,22 @@ Phase 1 is deterministic and offline:
 
 Load context-retention-policy.md for protection/action rules and context-rehydration.md for recovery semantics.
 
-Phase 2 may add typed Context Reflex judgments only for Policy-eligible items. Replayability, authorization, evidence truth, and permission remain deterministic Policy metadata.
+## Phase 2 contract
+
+Phase 2 adds optional typed Context Reflex only for Policy-eligible replayable items.
+
+The v1 Context Reflex question set is deliberately small:
+- `keep_awareness`: does knowing the item/action existed still matter?
+- `keep_full`: is the exact full payload needed now?
+- `replay_needed`: is rehydration likely before the current obligation closes?
+
+Thresholds and request budgets live in `contracts/context-threshold-policy-v1.json`, separate from the question wording. Low-margin judgments abstain to `KEEP_REF`. Provider failure or missing configuration also prefers `KEEP_REF` over omission.
+
+Context Reflex uses the existing `ReflexProvider` protocol and the existing TypeSafe/Jev transport. There is no second client stack or credential path. A live provider is explicit opt-in: the presence of `TYPESAFE_API_KEY` alone never enables Context Reflex. With Jev selected but no key, the provider returns `NOT_CONFIGURED` and performs zero network requests.
+
+Only minimized metadata is projected remotely: bounded task fields, bounded source locator/tool metadata, size, evidence flags, deterministic replay/supersession metadata, recency, and Policy-admissible context actions. Canonical item IDs are replaced with batch-local candidate keys and raw payloads are not sent.
+
+Replayability, authorization, evidence truth, permission, protected-item classification, canonical deletion, and external-effect replay remain deterministic Policy concerns.
 
 ## Attribution
 
