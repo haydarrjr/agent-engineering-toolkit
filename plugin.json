@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "agent-engineering-toolkit",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Open-source engineering skills for repository work, Python, host-native MARGOS orchestration, ReThinking audits, and Agent Plugins authoring.",
   "author": {
     "name": "Önder Türkan"
