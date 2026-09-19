@@ -81,6 +81,26 @@ class MargosPolicyTests(unittest.TestCase):
         self.assertEqual(receipt['selected']['source'],'LOW_MARGIN_FALLBACK')
         self.assertTrue(receipt['selected']['abstained'])
 
+    def test_high_ambiguity_probability_escalates_compute(self):
+        a=answers(escalation=.05)
+        a['task_ambiguity']=choice('HIGH',['LOW','MODERATE','HIGH','SEVERE'],winner=.80)
+        receipt=mod.decide(state(),mod.FixtureReflexProvider(a))
+        self.assertEqual(receipt['selected']['compute'],'FRONTIER_REASONING')
+        self.assertGreaterEqual(
+            receipt['reflex']['derived_signals']['task_ambiguity_high_probability'],
+            mod.THRESHOLDS['semantic_escalation'],
+        )
+
+    def test_high_verification_risk_probability_escalates_compute(self):
+        a=answers(escalation=.05)
+        a['verification_risk']=choice('CRITICAL',['LOW','MEDIUM','HIGH','CRITICAL'],winner=.80)
+        receipt=mod.decide(state(),mod.FixtureReflexProvider(a))
+        self.assertEqual(receipt['selected']['compute'],'FRONTIER_REASONING')
+        self.assertGreaterEqual(
+            receipt['reflex']['derived_signals']['verification_risk_high_probability'],
+            mod.THRESHOLDS['semantic_escalation'],
+        )
+
     def test_receipt_is_proposed_not_execution_proof(self):
         receipt=mod.decide(state())
         self.assertEqual(receipt['decision_authority'],'PROPOSED')
