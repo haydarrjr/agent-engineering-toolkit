@@ -83,7 +83,138 @@ check(props.get('authority',{}).get('const')=='DERIVED_VIEW','context receipt au
 check(props.get('canonical_source_mutated',{}).get('const') is False,'context receipt must prove canonical source is not mutated')
 check(props.get('question_set_version',{}).get('const')=='margos-context-questions/v1','context receipt must bind question-set version')
 check(props.get('threshold_policy_version',{}).get('const')=='margos-context-thresholds/v1','context receipt must bind threshold-policy version')
-check(props.get('threshold_policy_sha256',{}).get('pattern')=='^[0-9a-f]{64}
+check(props.get('threshold_policy_sha256',{}).get('pattern')=='^[0-9a-f]{64}provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
+for status in ('DISABLED','AVAILABLE','NOT_CONFIGURED','ERROR'):
+    check(status in provider_statuses,f'context receipt provider status missing {status}')
+
+kernel=MARGOS/'scripts/margos_context.py'
+check(kernel.is_file(),'missing MARGOS context kernel')
+if kernel.is_file():
+    text=kernel.read_text(encoding='utf-8').lower()
+    for token in (
+        'contextaction',
+        'omit_rehydratable',
+        'margos-ctx-pol-001',
+        'canonical_source_mutated',
+        'may_repeat_external_effect',
+        'derived_view',
+        'routing_core.reflexprovider',
+        'keep_awareness',
+        'keep_full',
+        'replay_needed',
+        '--reflex-provider',
+        'not_configured',
+        'remote_semantic_capsule_allowed',
+        'semantic_capsule_chars',
+        'threshold_policy_sha256',
+        'secret_patterns',
+    ):
+        check(token in text,f'MARGOS context kernel missing {token}')
+    for forbidden in ('import requests','import httpx','urllib.request','session.compact','claude'):
+        check(forbidden not in text,f'context kernel must remain host-neutral and transport-free: {forbidden}')
+
+adapter=MARGOS/'scripts/margos_reflex_jev.py'
+check(adapter.is_file(),'missing shared Jev Reflex adapter')
+if adapter.is_file():
+    text=adapter.read_text(encoding='utf-8')
+    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','state.candidates['):
+        check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
+    check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
+    check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')
+
+policy=(MARGOS/'references/context-retention-policy.md').read_text(encoding='utf-8') if (MARGOS/'references/context-retention-policy.md').is_file() else ''
+for token in ('PIN','KEEP_FULL','KEEP_REF','KEEP_HEAD','OMIT_REHYDRATABLE','MARGOS-CTX-POL-001'):
+    check(token in policy,f'context retention policy missing {token}')
+check('There is no DELETE action.' in policy,'context retention policy must reject destructive deletion')
+
+governor=(MARGOS/'references/context-governor.md').read_text(encoding='utf-8') if (MARGOS/'references/context-governor.md').is_file() else ''
+for token in ('keep_awareness','keep_full','replay_needed','TYPESAFE_API_KEY','NOT_CONFIGURED'):
+    check(token in governor,f'context governor docs missing Phase 2 contract: {token}')
+check('alone never enables Context Reflex' in governor,'Context Reflex must require explicit provider selection')
+
+rehydration_doc=(MARGOS/'references/context-rehydration.md').read_text(encoding='utf-8') if (MARGOS/'references/context-rehydration.md').is_file() else ''
+check('cannot silently repeat an external mutation' in rehydration_doc,'rehydration must forbid silent mutation replay')
+check('content_sha256' in rehydration_doc,'rehydration must be content-addressed')
+
+ci=(ROOT/'.github/workflows/ci.yml').read_text(encoding='utf-8')
+check('TYPESAFE_API_KEY' not in ci,'CI must not inject a live TypeSafe key')
+check('--reflex-provider jev' not in ci,'CI must not invoke live Context Reflex')
+check((ROOT/'tests/test_margos_context_policy.py').is_file(),'missing deterministic context policy tests')
+check((ROOT/'tests/test_margos_context_reflex.py').is_file(),'missing Context Reflex fixture tests')
+
+if errors:
+    print('MARGOS context validation: FAIL')
+    for error in errors:
+        print('ERROR:',error)
+    raise SystemExit(1)
+print('MARGOS context validation: PASS')
+print('authority: deterministic Policy -> optional Context Reflex -> derived Context View')
+print('live provider: explicit opt-in only; CI remains fixture/offline')
+,'context receipt must bind threshold-policy hash')
+provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
+for status in ('DISABLED','AVAILABLE','NOT_CONFIGURED','ERROR'):
+    check(status in provider_statuses,f'context receipt provider status missing {status}')
+
+kernel=MARGOS/'scripts/margos_context.py'
+check(kernel.is_file(),'missing MARGOS context kernel')
+if kernel.is_file():
+    text=kernel.read_text(encoding='utf-8').lower()
+    for token in (
+        'contextaction',
+        'omit_rehydratable',
+        'margos-ctx-pol-001',
+        'canonical_source_mutated',
+        'may_repeat_external_effect',
+        'derived_view',
+        'routing_core.reflexprovider',
+        'keep_awareness',
+        'keep_full',
+        'replay_needed',
+        '--reflex-provider',
+        'not_configured',
+    ):
+        check(token in text,f'MARGOS context kernel missing {token}')
+    for forbidden in ('import requests','import httpx','urllib.request','session.compact','claude'):
+        check(forbidden not in text,f'context kernel must remain host-neutral and transport-free: {forbidden}')
+
+adapter=MARGOS/'scripts/margos_reflex_jev.py'
+check(adapter.is_file(),'missing shared Jev Reflex adapter')
+if adapter.is_file():
+    text=adapter.read_text(encoding='utf-8')
+    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count'):
+        check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
+    check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
+    check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')
+
+policy=(MARGOS/'references/context-retention-policy.md').read_text(encoding='utf-8') if (MARGOS/'references/context-retention-policy.md').is_file() else ''
+for token in ('PIN','KEEP_FULL','KEEP_REF','KEEP_HEAD','OMIT_REHYDRATABLE','MARGOS-CTX-POL-001'):
+    check(token in policy,f'context retention policy missing {token}')
+check('There is no DELETE action.' in policy,'context retention policy must reject destructive deletion')
+
+governor=(MARGOS/'references/context-governor.md').read_text(encoding='utf-8') if (MARGOS/'references/context-governor.md').is_file() else ''
+for token in ('keep_awareness','keep_full','replay_needed','TYPESAFE_API_KEY','NOT_CONFIGURED'):
+    check(token in governor,f'context governor docs missing Phase 2 contract: {token}')
+check('alone never enables Context Reflex' in governor,'Context Reflex must require explicit provider selection')
+
+rehydration_doc=(MARGOS/'references/context-rehydration.md').read_text(encoding='utf-8') if (MARGOS/'references/context-rehydration.md').is_file() else ''
+check('cannot silently repeat an external mutation' in rehydration_doc,'rehydration must forbid silent mutation replay')
+check('content_sha256' in rehydration_doc,'rehydration must be content-addressed')
+
+ci=(ROOT/'.github/workflows/ci.yml').read_text(encoding='utf-8')
+check('TYPESAFE_API_KEY' not in ci,'CI must not inject a live TypeSafe key')
+check('--reflex-provider jev' not in ci,'CI must not invoke live Context Reflex')
+check((ROOT/'tests/test_margos_context_policy.py').is_file(),'missing deterministic context policy tests')
+check((ROOT/'tests/test_margos_context_reflex.py').is_file(),'missing Context Reflex fixture tests')
+
+if errors:
+    print('MARGOS context validation: FAIL')
+    for error in errors:
+        print('ERROR:',error)
+    raise SystemExit(1)
+print('MARGOS context validation: PASS')
+print('authority: deterministic Policy -> optional Context Reflex -> derived Context View')
+print('live provider: explicit opt-in only; CI remains fixture/offline')
+,'context receipt must bind threshold-policy hash')
 provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
 for status in ('DISABLED','AVAILABLE','NOT_CONFIGURED','ERROR'):
     check(status in provider_statuses,f'context receipt provider status missing {status}')
