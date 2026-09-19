@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Child Rehydration Result v1",
+  "type": "object",
+  "required": ["schema_version", "authority", "child_id", "role", "items", "canonical_source_mutated"],
+  "properties": {
+    "schema_version": {"const": "margos-child-rehydration-result/v1"},
+    "authority": {"const": "DERIVED_VIEW"},
+    "child_id": {"type": "string"},
+    "role": {"enum": ["SCOUT", "WORKER", "VERIFIER", "INDEPENDENT_CRITIC"]},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "status"],
+        "properties": {
+          "item_id": {"type": "string"},
+          "status": {"enum": ["REHYDRATED", "PENDING_AUTHORITY_RECHECK", "REJECTED_NOT_EXPOSED", "REJECTED_UNAVAILABLE"]},
+          "content": {"type": "string"},
+          "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "canonical_source_mutated": {"const": false}
+  },
+  "additionalProperties": false
+}

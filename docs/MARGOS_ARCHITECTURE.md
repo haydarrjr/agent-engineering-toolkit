@@ -89,3 +89,24 @@ Only replayable Policy-eligible items can be evaluated by Context Reflex. Protec
 The existing provider abstraction and TypeSafe/Jev transport are reused. Live Context Reflex is explicit opt-in; an API key in the environment does not activate it by itself. Missing key, malformed answer, or provider failure cannot authorize omission and falls back conservatively.
 
 The remote Context Reflex projection excludes raw item payloads and replaces local item IDs with batch-local candidate keys. Batch size and projection-character budgets are deterministic local contracts. Context receipts bind the question-set hash, threshold-policy version, provider status, request/network counts, and per-item Reflex probabilities without claiming that retained content is true or omitted content is irrelevant.
+
+
+## Role-aware child context Phase 3
+
+Phase 3 connects Context Governor to actual MARGOS child execution without adding a new authority layer.
+
+```text
+route receipt
+   -> parent Context View/receipt
+   -> versioned child contract + role policy
+   -> child bundle/receipt
+   -> route context_binding
+   -> host-native child
+   -> optional parent-side rehydration
+```
+
+Scout, Worker, Verifier, and Independent Critic receive distinct bounded bundles. Policy-protected state always crosses the handoff. Required role evidence cannot be removed by optional budgets. Independent Critic inherits no optional implementation context.
+
+The child-context receipt binds the unbound route receipt, parent context receipt/view, handoff-policy version, bundle hash, required coverage, and reduction metrics. Binding is derived and never mutates canonical evidence.
+
+Child rehydration is request-only from the leaf agent. Exact recovery is performed at the parent boundary with the existing content-hash checks. Recompute/refetch methods that require authority review remain pending until that review occurs.

@@ -1,0 +1,38 @@
+{
+  "version": "margos-child-handoff-policy/v1",
+  "roles": {
+    "SCOUT": {
+      "inherit_optional": true,
+      "optional_match": "TOOL_SIGNAL",
+      "optional_tool_signals": ["search", "find", "grep"],
+      "ordinary_full_cap": "KEEP_HEAD",
+      "optional_full_cap": "KEEP_HEAD",
+      "exact_reasons": []
+    },
+    "WORKER": {
+      "inherit_optional": true,
+      "optional_match": "OWNED_PATH",
+      "optional_tool_signals": [],
+      "ordinary_full_cap": "KEEP_FULL",
+      "optional_full_cap": "KEEP_HEAD",
+      "exact_reasons": ["EXPLICIT_FULL"]
+    },
+    "VERIFIER": {
+      "inherit_optional": true,
+      "optional_match": "TOOL_SIGNAL",
+      "optional_tool_signals": ["test", "build", "verify", "check"],
+      "ordinary_full_cap": "KEEP_FULL",
+      "optional_full_cap": "KEEP_HEAD",
+      "exact_reasons": ["EXPLICIT_FULL", "IMPLEMENTATION_RESULT", "VERIFICATION_EVIDENCE"]
+    },
+    "INDEPENDENT_CRITIC": {
+      "inherit_optional": false,
+      "optional_match": "NONE",
+      "optional_tool_signals": [],
+      "ordinary_full_cap": "KEEP_HEAD",
+      "optional_full_cap": "KEEP_HEAD",
+      "exact_reasons": ["EXPLICIT_FULL", "IMPLEMENTATION_RESULT"],
+      "fresh_evidence_action": "KEEP_HEAD"
+    }
+  }
+}

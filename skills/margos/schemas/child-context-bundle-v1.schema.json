@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Child Context Bundle v1",
+  "type": "object",
+  "required": ["schema_version", "authority", "handoff_policy_version", "child_id", "role", "route", "task", "items", "rehydration_index", "binding", "budget"],
+  "properties": {
+    "schema_version": {"const": "margos-child-context-bundle/v1"},
+    "authority": {"const": "DERIVED_VIEW"},
+    "handoff_policy_version": {"const": "margos-child-handoff-policy/v1"},
+    "child_id": {"type": "string", "minLength": 1},
+    "role": {"enum": ["SCOUT", "WORKER", "VERIFIER", "INDEPENDENT_CRITIC"]},
+    "route": {
+      "type": "object",
+      "required": ["coordination", "compute", "role", "model_provider_constraint"],
+      "properties": {
+        "coordination": {"enum": ["TRANSFER", "DELEGATED", "SERIALIZED"]},
+        "compute": {"enum": ["ECONOMY_READ", "BALANCED_EXEC", "FRONTIER_REASONING"]},
+        "role": {"enum": ["SCOUT", "WORKER", "VERIFIER", "INDEPENDENT_CRITIC"]},
+        "model_provider_constraint": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "task": {
+      "type": "object",
+      "required": ["objective", "owned_paths", "verification_obligation", "output_contract"],
+      "properties": {
+        "objective": {"type": "string"},
+        "owned_paths": {"type": "array", "items": {"type": "string"}},
+        "verification_obligation": {"type": "string"},
+        "output_contract": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "kind", "action", "selection_reasons", "reference"],
+        "properties": {
+          "item_id": {"type": "string"},
+          "kind": {"type": "string"},
+          "action": {"enum": ["PIN", "KEEP_FULL", "KEEP_REF", "KEEP_HEAD"]},
+          "selection_reasons": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+          "content": {"type": "string"},
+          "head": {"type": "string"},
+          "reference": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "rehydration_index": {"type": "array", "items": {"type": "object"}},
+    "binding": {
+      "type": "object",
+      "required": ["route_receipt_sha256", "parent_context_receipt_sha256", "parent_context_view_sha256"],
+      "properties": {
+        "route_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "parent_context_receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "parent_context_view_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "budget": {
+      "type": "object",
+      "required": ["max_optional_items", "max_optional_payload_chars", "optional_items_used", "optional_payload_chars_used"],
+      "properties": {
+        "max_optional_items": {"type": "integer", "minimum": 0},
+        "max_optional_payload_chars": {"type": "integer", "minimum": 0},
+        "optional_items_used": {"type": "integer", "minimum": 0},
+        "optional_payload_chars_used": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

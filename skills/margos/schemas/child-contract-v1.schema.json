@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Child Contract v1",
+  "type": "object",
+  "required": [
+    "schema_version", "child_id", "role", "objective", "owned_paths",
+    "required_context_ids", "required_full_ids", "implementation_result_ids",
+    "verification_evidence_ids", "fresh_evidence_ids",
+    "verification_obligation", "output_contract", "budget"
+  ],
+  "properties": {
+    "schema_version": {"const": "margos-child-contract/v1"},
+    "child_id": {"type": "string", "minLength": 1},
+    "role": {"enum": ["SCOUT", "WORKER", "VERIFIER", "INDEPENDENT_CRITIC"]},
+    "objective": {"type": "string", "minLength": 1},
+    "owned_paths": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "required_context_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "required_full_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "implementation_result_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "verification_evidence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "fresh_evidence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "verification_obligation": {"type": "string"},
+    "output_contract": {"type": "string", "minLength": 1},
+    "budget": {
+      "type": "object",
+      "required": ["max_optional_items", "max_optional_payload_chars"],
+      "properties": {
+        "max_optional_items": {"type": "integer", "minimum": 0, "maximum": 64},
+        "max_optional_payload_chars": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

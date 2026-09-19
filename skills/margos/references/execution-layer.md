@@ -1,23 +1,28 @@
 # MARGOS Execution layer
 
-Execution consumes a finalized abstract route after Policy has revalidated it.
+Execution consumes a finalized abstract route after Policy has revalidated it and maps coordination, disposition, compute tier, role, explicit model/provider constraints, and role-aware derived context to host-native mechanisms.
 
-It maps:
-- coordination shape;
-- disposition;
-- compute tier;
-- role;
-- explicit user model/provider constraint;
-
-to the host-native mechanisms the current client actually exposes.
-
-Execution cannot infer a child/model switch from configuration text. If a requested abstract capability cannot be proven at runtime, use the Policy-defined fallback and report the limitation. Root approval policy, sandbox, credentials, connectors, and mutation authority remain unchanged.
-
-Phase 2 does not change Codex or Copilot runtime behavior; host-specific mapping remains in the existing host references and leaf agents. Phase 3 will connect this typed route contract to those surfaces.
-
+Execution cannot infer a child/model switch from configuration text. Missing runtime capability uses the Policy fallback; approval, sandbox, credentials, connectors, and mutation authority remain unchanged.
 
 ## Context materialization
 
-Execution may consume a deterministic Context View produced by margos_context.py. The view is DERIVED_VIEW authority and never replaces the canonical evidence plane. PIN and KEEP_FULL preserve exact hash-checked payloads; references and omissions retain rehydration metadata. Rehydration cannot widen permission or silently repeat an external mutation.
+`margos_context.py` produces a `DERIVED_VIEW`; canonical evidence remains authoritative. Exact payloads are hash-checked, references retain rehydration metadata, and rehydration cannot widen permission or silently repeat an external mutation.
 
-Phase 1 does not wire host compaction hooks or live provider behavior. Child-context integration remains a later phase.
+## Phase 3 child handoff
+
+Before `TRANSFER`, `DELEGATED`, or `SERIALIZED` child execution, use `margos_handoff.py` to build a role-aware child bundle and child-context receipt.
+
+Portable order:
+1. consume the finalized proposed route;
+2. materialize one parent Context View/receipt;
+3. validate a child contract whose role matches the route;
+4. build the smallest role-aware evidence-sufficient child bundle;
+5. create a child-context receipt bound to route/context hashes;
+6. create a derived route-receipt copy with `context_binding`;
+7. invoke the host-native child;
+8. consume runtime evidence and structured rehydration requests;
+9. reconcile and verify at the root.
+
+A `DIRECT` / `PRIMARY` route does not create a child bundle. Load [role-aware child context](child-context.md) for role policy, bindings, and rehydration.
+
+Route/context receipts remain proposed/derived artifacts; they do not prove a child or exact model actually ran.

@@ -1,0 +1,25 @@
+{
+  "version": "margos-child-role-contract/v1",
+  "cases": [
+    {
+      "role": "SCOUT",
+      "must_include": ["constraint", "search"],
+      "must_exclude": ["chatter", "implementation", "testlog"]
+    },
+    {
+      "role": "WORKER",
+      "must_include": ["constraint", "owned"],
+      "must_exclude": ["chatter", "implementation", "testlog"]
+    },
+    {
+      "role": "VERIFIER",
+      "must_include": ["constraint", "implementation", "testlog"],
+      "must_exclude": ["chatter", "owned"]
+    },
+    {
+      "role": "INDEPENDENT_CRITIC",
+      "must_include": ["constraint", "implementation", "fresh"],
+      "must_exclude": ["chatter", "owned", "testlog"]
+    }
+  ]
+}

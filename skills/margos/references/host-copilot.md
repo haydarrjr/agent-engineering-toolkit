@@ -1,25 +1,25 @@
 # GitHub Copilot and VS Code host adapter
 
-The Agent Plugins 1.0 package ships MARGOS helper agents under `com.github.copilot/agents/`. They are client-specific adapters; the portable MARGOS skill remains model/provider agnostic and no MCP server is required.
+The Agent Plugins package ships hidden MARGOS leaf agents under `com.github.copilot/agents/`; no MCP server is required.
 
-## Shipped agents
-
-- `margos-scout` — read-only mapping and bounded research.
-- `margos-worker` — ordinary scoped implementation.
-- `margos-verifier` — independent checks without production-code edits.
-- `margos-critic` — fresh-context falsification for ambiguous or high-impact work.
-
-Each helper uses `model: auto` so Copilot/VS Code can choose among models allowed by the current account. MARGOS chooses the role and compute need; the host resolves the exact available model.
-
-When a vNext route receipt is available, map roles as follows:
 - `SCOUT` -> `margos-scout`
 - `WORKER` -> `margos-worker`
 - `VERIFIER` -> `margos-verifier`
 - `INDEPENDENT_CRITIC` -> `margos-critic`
 - `PRIMARY` -> root session
 
-The route receipt remains `PROPOSED`. Client runtime evidence is required before changing `host_execution.status` or claiming an exact model ran.
+Each helper keeps `model: auto`; MARGOS selects the abstract role/compute need while the host resolves the exact available model. Runtime evidence is required before changing execution status.
 
-When subagent execution is available, invoke the narrowest helper with a bounded return contract. The shipped helpers do not receive an agent tool, so they cannot recursively expand the graph. If the client does not expose subagent execution or automatic model selection, fall back to direct work and report the host limitation.
+## Phase 3 bounded handoff
 
-Do not infer the exact provider/model from `auto`; use runtime readback when available. An explicit instruction to use one model/provider for all work overrides automatic binding.
+Before a child invocation:
+1. build the role-aware bundle with `margos_handoff.py`;
+2. bind child-context receipt hashes into the derived route receipt;
+3. pass the child task contract + bounded bundle to the mapped leaf agent;
+4. do not automatically attach the root's whole conversation;
+5. parse any `rehydration_requests` at the parent boundary;
+6. rehydrate only exposed references through deterministic checks.
+
+Leaf agents treat omitted context as unavailable instead of guessing it. Independent Critic receives no optional inherited implementation context. Children never gain authority to repeat a remote mutation.
+
+If subagent execution/model selection is unavailable, fall back to direct work and report the host limitation. Do not infer the exact provider/model from `auto`.

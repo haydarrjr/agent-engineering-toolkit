@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Child Result v1",
+  "type": "object",
+  "required": ["schema_version", "child_id", "role", "status", "rehydration_requests"],
+  "properties": {
+    "schema_version": {"const": "margos-child-result/v1"},
+    "child_id": {"type": "string", "minLength": 1},
+    "role": {"enum": ["SCOUT", "WORKER", "VERIFIER", "INDEPENDENT_CRITIC"]},
+    "status": {"enum": ["COMPLETE", "PASS", "FAIL", "UNVERIFIED", "ESCALATE"]},
+    "rehydration_requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "reason"],
+        "properties": {
+          "item_id": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
