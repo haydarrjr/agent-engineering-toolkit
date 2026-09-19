@@ -344,6 +344,7 @@ def safety_metrics(
     parent_receipt: Mapping[str, Any],
     bundle: Mapping[str, Any],
 ) -> dict[str, int]:
+    state = ctx.normalize_state(state)
     selected = {entry["item_id"] for entry in bundle["items"]}
     decisions = {entry["item_id"]: entry for entry in parent_receipt["actions"]}
     protected_loss = 0
