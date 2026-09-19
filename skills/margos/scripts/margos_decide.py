@@ -18,7 +18,16 @@ THRESHOLD_DOC = json.loads((ROOT/"contracts/threshold-policy-v1.json").read_text
 QUESTION_SET_VERSION = QUESTION_DOC["version"]
 THRESHOLD_POLICY_VERSION = THRESHOLD_DOC["version"]
 QUESTION_SET = tuple(QUESTION_DOC["questions"])
-THRESHOLDS = {k: float(THRESHOLD_DOC[k]) for k in ("choice_min_margin","needs_escalation","needs_independent_critic","transfer_sufficient")}
+THRESHOLDS = {
+    key: float(THRESHOLD_DOC[key])
+    for key in (
+        "choice_min_margin",
+        "semantic_escalation",
+        "needs_escalation",
+        "needs_independent_critic",
+        "transfer_sufficient",
+    )
+}
 
 class Coordination(str, Enum):
     DIRECT="DIRECT"; TRANSFER="TRANSFER"; DELEGATED="DELEGATED"; SERIALIZED="SERIALIZED"
@@ -59,6 +68,10 @@ def _hash(value: Any) -> str:
 
 def question_set_sha256() -> str:
     return _hash(QUESTION_DOC)
+
+
+def threshold_policy_sha256() -> str:
+    return _hash(THRESHOLD_DOC)
 
 def _bool(obj, key, default=False):
     value=obj.get(key, default)
@@ -145,7 +158,12 @@ def _pre(state,disposition,coordination,compute,roles,rules,blocked,forced,refle
     return {"policy_version":POLICY_VERSION,"state":state,"state_sha256":_hash(state),"disposition":disposition,"admissible":{"coordination":coordination,"compute":compute,"roles":roles},"blocked":blocked,"rules":rules,"forced_route":forced,"reflex_useful":reflex}
 
 def build_reflex_request(pre: Mapping[str, Any]) -> dict[str, Any]:
-    return {"schema_version":REFLEX_REQUEST_VERSION,"routing_state":pre["state"],"admissible":pre["admissible"]}
+    return {
+        "schema_version": REFLEX_REQUEST_VERSION,
+        "routing_state": pre["state"],
+        "admissible": pre["admissible"],
+        "threshold_policy_sha256": threshold_policy_sha256(),
+    }
 
 def _distribution(answer, options, qid):
     probs=answer.get("probabilities")
@@ -177,26 +195,119 @@ def validate_reflex_result(result: Mapping[str, Any], pre: Mapping[str, Any]) ->
     return {"schema_version":"margos-reflex-result/v1","provider":dict(provider),"question_set_sha256":result["question_set_sha256"],"answers":validated}
 
 def _margin(answer):
-    vals=sorted((float(v) for v in answer["probabilities"].values()),reverse=True)
-    return vals[0]-vals[1] if len(vals)>1 else 1.0
+    vals = sorted((float(v) for v in answer["probabilities"].values()), reverse=True)
+    return vals[0] - vals[1] if len(vals) > 1 else 1.0
+
+
+def _mass(answer: Mapping[str, Any], labels: tuple[str, ...]) -> float:
+    probs = answer["probabilities"]
+    return sum(float(probs[label]) for label in labels)
+
+
+def reflex_signals(reflex: Mapping[str, Any] | None) -> dict[str, float]:
+    if reflex is None:
+        return {}
+    a = reflex["answers"]
+    ambiguity_high = _mass(a["task_ambiguity"], ("HIGH", "SEVERE"))
+    verification_high = _mass(a["verification_risk"], ("HIGH", "CRITICAL"))
+    needs_escalation = float(a["needs_escalation"]["probability"])
+    return {
+        "task_ambiguity_high_probability": ambiguity_high,
+        "verification_risk_high_probability": verification_high,
+        "needs_escalation_probability": needs_escalation,
+        "semantic_escalation_probability": max(
+            ambiguity_high, verification_high, needs_escalation
+        ),
+        "needs_independent_critic_probability": float(
+            a["needs_independent_critic"]["probability"]
+        ),
+        "transfer_sufficient_probability": float(a["transfer_sufficient"]["probability"]),
+    }
+
 
 def compose_decision(pre, reflex=None):
-    state=pre["state"]
-    if pre["disposition"]=="HALT": return _final(pre,{"disposition":"HALT","coordination":None,"compute":None,"role":None,"source":"DETERMINISTIC_POLICY","abstained":True})
-    if pre["forced_route"]: return _final(pre,{**pre["forced_route"],"source":"DETERMINISTIC_POLICY","abstained":False})
-    if reflex is None: return _final(pre,{"disposition":"PROCEED","coordination":"DIRECT","compute":_safe_compute(state,pre["admissible"]["compute"]),"role":"PRIMARY","source":"POLICY_FALLBACK","abstained":True})
-    a=reflex["answers"]; ca=a["coordination_preference"]; co=a["compute_preference"]
-    if _margin(ca)<THRESHOLDS["choice_min_margin"] or _margin(co)<THRESHOLDS["choice_min_margin"]:
-        return _final(pre,{"disposition":"FALLBACK_DIRECT","coordination":"DIRECT","compute":_safe_compute(state,pre["admissible"]["compute"]),"role":"PRIMARY","source":"LOW_MARGIN_FALLBACK","abstained":True})
-    coordination=ca["value"]; compute=co["value"]
-    critic=a["needs_independent_critic"]["probability"]>=THRESHOLDS["needs_independent_critic"]
-    if a["needs_escalation"]["probability"]>=THRESHOLDS["needs_escalation"] and "FRONTIER_REASONING" in pre["admissible"]["compute"]: compute="FRONTIER_REASONING"
+    state = pre["state"]
+    if pre["disposition"] == "HALT":
+        return _final(
+            pre,
+            {
+                "disposition": "HALT",
+                "coordination": None,
+                "compute": None,
+                "role": None,
+                "source": "DETERMINISTIC_POLICY",
+                "abstained": True,
+            },
+        )
+    if pre["forced_route"]:
+        return _final(
+            pre,
+            {**pre["forced_route"], "source": "DETERMINISTIC_POLICY", "abstained": False},
+        )
+    if reflex is None:
+        return _final(
+            pre,
+            {
+                "disposition": "PROCEED",
+                "coordination": "DIRECT",
+                "compute": _safe_compute(state, pre["admissible"]["compute"]),
+                "role": "PRIMARY",
+                "source": "POLICY_FALLBACK",
+                "abstained": True,
+            },
+        )
+    a = reflex["answers"]
+    ca = a["coordination_preference"]
+    co = a["compute_preference"]
+    if _margin(ca) < THRESHOLDS["choice_min_margin"] or _margin(co) < THRESHOLDS[
+        "choice_min_margin"
+    ]:
+        return _final(
+            pre,
+            {
+                "disposition": "FALLBACK_DIRECT",
+                "coordination": "DIRECT",
+                "compute": _safe_compute(state, pre["admissible"]["compute"]),
+                "role": "PRIMARY",
+                "source": "LOW_MARGIN_FALLBACK",
+                "abstained": True,
+            },
+        )
+    signals = reflex_signals(reflex)
+    coordination = ca["value"]
+    compute = co["value"]
+    if (
+        signals["semantic_escalation_probability"]
+        >= THRESHOLDS["semantic_escalation"]
+        and "FRONTIER_REASONING" in pre["admissible"]["compute"]
+    ):
+        compute = "FRONTIER_REASONING"
+    critic = (
+        signals["needs_independent_critic_probability"]
+        >= THRESHOLDS["needs_independent_critic"]
+    )
     if critic and "TRANSFER" in pre["admissible"]["coordination"]:
-        coordination="TRANSFER"; role="INDEPENDENT_CRITIC"
+        coordination = "TRANSFER"
+        role = "INDEPENDENT_CRITIC"
     else:
-        if coordination=="TRANSFER" and a["transfer_sufficient"]["probability"]<THRESHOLDS["transfer_sufficient"]: coordination="DIRECT"
-        role=_default_role(state,coordination)
-    return _final(pre,{"disposition":"PROCEED","coordination":coordination,"compute":compute,"role":role,"source":"REFLEX_ASSISTED","abstained":False})
+        if (
+            coordination == "TRANSFER"
+            and signals["transfer_sufficient_probability"] < THRESHOLDS["transfer_sufficient"]
+        ):
+            coordination = "DIRECT"
+        role = _default_role(state, coordination)
+    return _final(
+        pre,
+        {
+            "disposition": "PROCEED",
+            "coordination": coordination,
+            "compute": compute,
+            "role": role,
+            "source": "REFLEX_ASSISTED",
+            "abstained": False,
+        },
+    )
+
 
 def _final(pre,candidate):
     state=pre["state"]
@@ -207,39 +318,104 @@ def _final(pre,candidate):
     if candidate["role"] not in pre["admissible"]["roles"]: raise ValueError("final role violates Policy")
     return {**candidate,"model_provider_constraint":state["authority"]["explicit_model_provider_constraint"]}
 
-def decide(raw_state, provider: ReflexProvider|None=None):
-    pre=policy_pre_evaluate(raw_state); reflex=None; raw_reflex=None
-    provider_meta={"kind":"none","status":"DISABLED","calibration_status":"UNKNOWN"}
-    if provider is not None and pre["reflex_useful"] and pre["disposition"]!="HALT":
+def decide(raw_state, provider: ReflexProvider | None = None):
+    pre = policy_pre_evaluate(raw_state)
+    reflex = None
+    provider_meta = {"kind": "none", "status": "DISABLED", "calibration_status": "UNKNOWN"}
+    if provider is not None and pre["reflex_useful"] and pre["disposition"] != "HALT":
         try:
-            raw_reflex=provider.evaluate(build_reflex_request(pre),QUESTION_SET)
-            if isinstance(raw_reflex,Mapping) and isinstance(raw_reflex.get("provider"),Mapping):
-                provider_meta=dict(raw_reflex["provider"])
-            status=provider_meta.get("status")
-            if status=="AVAILABLE":
-                reflex=validate_reflex_result(raw_reflex,pre)
-                provider_meta=dict(reflex["provider"])
-            elif status in {"NOT_CONFIGURED","ERROR"}:
-                reflex=None
+            raw_reflex = provider.evaluate(build_reflex_request(pre), QUESTION_SET)
+            if isinstance(raw_reflex, Mapping) and isinstance(raw_reflex.get("provider"), Mapping):
+                provider_meta = dict(raw_reflex["provider"])
+            status = provider_meta.get("status")
+            if status == "AVAILABLE":
+                reflex = validate_reflex_result(raw_reflex, pre)
+                provider_meta = dict(reflex["provider"])
+            elif status in {"NOT_CONFIGURED", "ERROR"}:
+                reflex = None
             else:
                 raise ValueError(f"unsupported provider status: {status}")
-        except (TypeError,ValueError,KeyError) as exc:
-            provider_meta={**provider_meta,"status":"ERROR","error":f"{type(exc).__name__}: {exc}"}
-    decision=compose_decision(pre,reflex)
-    return {"schema_version":"margos-route-receipt/v1","decision_authority":"PROPOSED","state_sha256":pre["state_sha256"],"policy_version":POLICY_VERSION,"question_set_version":QUESTION_SET_VERSION,"question_set_sha256":question_set_sha256(),"threshold_policy_version":THRESHOLD_POLICY_VERSION,"provider":provider_meta,"admissible":pre["admissible"],"blocked":pre["blocked"],"policy_rules_applied":pre["rules"],"reflex":{"answers":reflex["answers"] if reflex else {}},"selected":decision,"host_execution":{"status":"PENDING"}}
+        except (TypeError, ValueError, KeyError) as exc:
+            provider_meta = {
+                **provider_meta,
+                "status": "ERROR",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
+    decision = compose_decision(pre, reflex)
+    return {
+        "schema_version": "margos-route-receipt/v1",
+        "decision_authority": "PROPOSED",
+        "state_sha256": pre["state_sha256"],
+        "policy_version": POLICY_VERSION,
+        "question_set_version": QUESTION_SET_VERSION,
+        "question_set_sha256": question_set_sha256(),
+        "threshold_policy_version": THRESHOLD_POLICY_VERSION,
+        "threshold_policy_sha256": threshold_policy_sha256(),
+        "provider": provider_meta,
+        "admissible": pre["admissible"],
+        "blocked": pre["blocked"],
+        "policy_rules_applied": pre["rules"],
+        "reflex": {
+            "answers": reflex["answers"] if reflex else {},
+            "derived_signals": reflex_signals(reflex),
+        },
+        "selected": decision,
+        "host_execution": {"status": "PENDING"},
+    }
 
-def _read(path):
-    value=json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(value,dict): raise ValueError("JSON input must be an object")
+
+def _read(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("JSON input must be an object")
     return value
 
-def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument("--state",type=Path,required=True); ap.add_argument("--fixture-reflex",type=Path); ap.add_argument("--output",type=Path)
-    args=ap.parse_args(); provider=FixtureReflexProvider(_read(args.fixture_reflex)) if args.fixture_reflex else None
-    rendered=json.dumps(decide(_read(args.state),provider),indent=2,sort_keys=True,ensure_ascii=False)+"\n"
-    if args.output: args.output.parent.mkdir(parents=True,exist_ok=True); args.output.write_text(rendered,encoding="utf-8")
-    else: print(rendered,end="")
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--state", type=Path, required=True)
+    ap.add_argument("--fixture-reflex", type=Path)
+    ap.add_argument(
+        "--reflex-provider",
+        choices=("none", "jev"),
+        default="none",
+        help="Live provider is explicit opt-in; API key presence alone never enables it.",
+    )
+    ap.add_argument("--jev-model")
+    ap.add_argument("--calibration-binding", type=Path)
+    ap.add_argument("--output", type=Path)
+    args = ap.parse_args()
+    if args.fixture_reflex and args.reflex_provider != "none":
+        ap.error("--fixture-reflex cannot be combined with a live provider")
+    if args.jev_model and args.reflex_provider != "jev":
+        ap.error("--jev-model requires --reflex-provider jev")
+    if args.calibration_binding and args.reflex_provider != "jev":
+        ap.error("--calibration-binding requires --reflex-provider jev")
+    if args.calibration_binding and not args.jev_model:
+        ap.error("--calibration-binding requires an explicit --jev-model")
+    provider: ReflexProvider | None = None
+    if args.fixture_reflex:
+        provider = FixtureReflexProvider(_read(args.fixture_reflex))
+    elif args.reflex_provider == "jev":
+        import margos_reflex_jev
+
+        binding = _read(args.calibration_binding) if args.calibration_binding else None
+        provider = margos_reflex_jev.JevReflexProvider(
+            model=args.jev_model, calibration_binding=binding
+        )
+    rendered = json.dumps(
+        decide(_read(args.state), provider),
+        indent=2,
+        sort_keys=True,
+        ensure_ascii=False,
+    ) + "\n"
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(rendered, encoding="utf-8")
+    else:
+        print(rendered, end="")
     return 0
 
-if __name__=="__main__": raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
