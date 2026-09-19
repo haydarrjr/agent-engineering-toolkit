@@ -54,3 +54,34 @@ jobs:
         run: python skills/agent-plugins-author/scripts/reconcile_surfaces.py .
       - name: Reproducible release
         run: python scripts/build_release.py --check-reproducible
+
+
+  cleanup_non_main_branches:
+    name: cleanup non-main branches
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[cleanup-non-main-branches]')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete every non-main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git ls-remote --heads origin |
+            awk '{sub("refs/heads/", "", $2); print $2}' |
+            while IFS= read -r branch; do
+              if [ "$branch" = "main" ]; then
+                continue
+              fi
+              echo "Deleting branch: $branch"
+              git push origin --delete "$branch"
+            done
+          remaining="$(git ls-remote --heads origin | awk '{sub("refs/heads/", "", $2); print $2}')"
+          if [ "$remaining" != "main" ]; then
+            echo "Expected only main after cleanup; found:"
+            printf '%s\n' "$remaining"
+            exit 1
+          fi
+          echo "Branch cleanup verified: main is the only branch."
