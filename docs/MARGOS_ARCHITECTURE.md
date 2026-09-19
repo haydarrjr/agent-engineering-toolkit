@@ -52,3 +52,14 @@ CI runs the deterministic fixture benchmark. Live provider evaluation is opt-in 
 > Probabilistic routing may choose among allowed paths; only deterministic Policy defines the allowed paths.
 
 The optional Reflex layer can improve route selection, but it cannot create credentials, permissions, host capabilities, execution facts, or verification evidence.
+
+
+## Issue #10: evidence-aware Context Governor
+
+MARGOS keeps the same three layers. Reflex gains a second decision family for context allocation, but Context Governor is not a fourth authority layer.
+
+Policy deterministically defines which context may be reduced. Context Reflex may later estimate usefulness only inside that admissible set. Execution materializes a derived Context View. Canonical repository/file state, tool evidence, Proof/Freshness artifacts, route receipts, and external readback remain authoritative outside the view.
+
+Phase 1 is deliberately offline and provider-free. The implementation adds versioned context item/state/decision/receipt schemas, deterministic protection and replayability rules, explicit supersession metadata, the PIN / KEEP_FULL / KEEP_REF / KEEP_HEAD / OMIT_REHYDRATABLE action model, content-addressed rehydration contracts, and a safe context materializer in skills/margos/scripts/margos_context.py.
+
+The deterministic baseline pins binding authority/evidence, keeps non-replayable items full, keeps structured references for current replayable eligible items, and permits omission only for replayable items that are explicitly superseded. No Phase 1 path deletes canonical evidence or repeats an external mutation.

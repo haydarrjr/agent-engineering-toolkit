@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Item v1",
+  "type": "object",
+  "required": ["schema_version", "item_id", "kind", "source", "content_sha256", "size", "authority", "evidence", "replay", "supersession", "recency"],
+  "properties": {
+    "schema_version": {"const": "margos-context-item/v1"},
+    "item_id": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "properties": {
+        "tool": {"type": "string"},
+        "locator": {"type": "string"},
+        "result_status": {"type": "string"},
+        "content_version": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "size": {
+      "type": "object",
+      "required": ["chars"],
+      "properties": {
+        "chars": {"type": "integer", "minimum": 0},
+        "tokens_estimated": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "contains_user_constraint": {"type": "boolean"},
+        "contains_task_objective": {"type": "boolean"},
+        "contains_permission_state": {"type": "boolean"},
+        "contains_write_ownership": {"type": "boolean"},
+        "contains_protected_path": {"type": "boolean"},
+        "contains_explicit_model_provider_constraint": {"type": "boolean"},
+        "contains_unresolved_external_effect": {"type": "boolean"},
+        "contains_pending_confirmation": {"type": "boolean"},
+        "contains_active_verification_obligation": {"type": "boolean"},
+        "contains_unresolved_verification_failure": {"type": "boolean"},
+        "contains_latest_route_decision": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "proof_bound": {"type": "boolean"},
+        "freshness_bound": {"type": "boolean"},
+        "contradiction_open": {"type": "boolean"},
+        "supports_claimed_pass": {"type": "boolean"},
+        "proof_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "freshness_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "route_receipt_id": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "type": "object",
+      "required": ["status", "method"],
+      "properties": {
+        "status": {"enum": ["REPLAYABLE", "NON_REPLAYABLE", "UNKNOWN"]},
+        "method": {"enum": ["READ_FILE", "REPEAT_REPO_SEARCH", "READ_EVIDENCE_ARTIFACT", "REPEAT_TEST", "REPEAT_BUILD", "REFETCH_PUBLIC_DOC", "READ_CHILD_RESULT_STORE", "HOST_TRANSCRIPT_HANDLE", "UNAVAILABLE"]},
+        "locator": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "supersession": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["CURRENT", "SUPERSEDED"]},
+        "superseded_by": {"type": ["string", "null"]}
+      },
+      "additionalProperties": false
+    },
+    "recency": {
+      "type": "object",
+      "properties": {"turn_distance": {"type": "integer", "minimum": 0}},
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

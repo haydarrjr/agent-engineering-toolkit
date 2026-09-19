@@ -14,3 +14,10 @@ to the host-native mechanisms the current client actually exposes.
 Execution cannot infer a child/model switch from configuration text. If a requested abstract capability cannot be proven at runtime, use the Policy-defined fallback and report the limitation. Root approval policy, sandbox, credentials, connectors, and mutation authority remain unchanged.
 
 Phase 2 does not change Codex or Copilot runtime behavior; host-specific mapping remains in the existing host references and leaf agents. Phase 3 will connect this typed route contract to those surfaces.
+
+
+## Context materialization
+
+Execution may consume a deterministic Context View produced by margos_context.py. The view is DERIVED_VIEW authority and never replaces the canonical evidence plane. PIN and KEEP_FULL preserve exact hash-checked payloads; references and omissions retain rehydration metadata. Rehydration cannot widen permission or silently repeat an external mutation.
+
+Phase 1 does not wire host compaction hooks or live provider behavior. Child-context integration remains a later phase.

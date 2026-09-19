@@ -1,0 +1,127 @@
+{
+  "schema_version": "margos-context-fixture/v1",
+  "state": {
+    "schema_version": "margos-context-state/v1",
+    "task": {
+      "task_id": "fixture-bounded-view",
+      "objective": "materialize safe child-ready view",
+      "verification_obligation": "preserve protected evidence"
+    },
+    "items": [
+      {
+        "schema_version": "margos-context-item/v1",
+        "item_id": "constraint",
+        "kind": "TOOL_RESULT",
+        "source": {
+          "tool": "read_file",
+          "locator": "fixture/constraint.txt",
+          "result_status": "OK",
+          "content_version": "fixture-v1"
+        },
+        "content_sha256": "524fc2eb2b13dfac871130a6815d3ff0c845422591e73486d8d1154be187a5e6",
+        "size": {
+          "chars": 33,
+          "tokens_estimated": 8
+        },
+        "authority": {
+          "contains_user_constraint": true
+        },
+        "evidence": {},
+        "replay": {
+          "status": "REPLAYABLE",
+          "method": "READ_FILE",
+          "locator": "fixture/constraint.txt"
+        },
+        "supersession": {
+          "status": "CURRENT",
+          "superseded_by": null
+        },
+        "recency": {
+          "turn_distance": 1
+        }
+      },
+      {
+        "schema_version": "margos-context-item/v1",
+        "item_id": "old",
+        "kind": "TOOL_RESULT",
+        "source": {
+          "tool": "read_file",
+          "locator": "fixture/old.txt",
+          "result_status": "OK",
+          "content_version": "fixture-v1"
+        },
+        "content_sha256": "7a5bc09ad6746b09c2e2c108c25e4552ed17c2a8290fbbb9a912d4d9b347b186",
+        "size": {
+          "chars": 1251,
+          "tokens_estimated": 312
+        },
+        "authority": {},
+        "evidence": {},
+        "replay": {
+          "status": "REPLAYABLE",
+          "method": "READ_FILE",
+          "locator": "fixture/old.txt"
+        },
+        "supersession": {
+          "status": "SUPERSEDED",
+          "superseded_by": "current"
+        },
+        "recency": {
+          "turn_distance": 1
+        }
+      },
+      {
+        "schema_version": "margos-context-item/v1",
+        "item_id": "current",
+        "kind": "TOOL_RESULT",
+        "source": {
+          "tool": "read_file",
+          "locator": "fixture/current.txt",
+          "result_status": "OK",
+          "content_version": "fixture-v1"
+        },
+        "content_sha256": "63a00d82abec1582587bf0d7b82d9cf3982c0be7f2076282957650590bfa0c1a",
+        "size": {
+          "chars": 1135,
+          "tokens_estimated": 283
+        },
+        "authority": {},
+        "evidence": {},
+        "replay": {
+          "status": "REPLAYABLE",
+          "method": "READ_FILE",
+          "locator": "fixture/current.txt"
+        },
+        "supersession": {
+          "status": "CURRENT",
+          "superseded_by": null
+        },
+        "recency": {
+          "turn_distance": 1
+        }
+      }
+    ],
+    "view": {
+      "head_chars": 64
+    }
+  },
+  "payloads": {
+    "constraint": "Do not mutate canonical evidence.",
+    "old": "OLD_RESULT: superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence superseded replayable evidence",
+    "current": "CURRENT_RESULT: current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence current replayable evidence"
+  },
+  "expect": {
+    "active_ids": [
+      "constraint",
+      "current"
+    ],
+    "omitted_ids": [
+      "old"
+    ],
+    "actions": {
+      "constraint": "PIN",
+      "old": "OMIT_REHYDRATABLE",
+      "current": "KEEP_REF"
+    }
+  }
+}
