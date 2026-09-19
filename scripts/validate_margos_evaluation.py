@@ -18,6 +18,11 @@ required = (
     ROOT / "tests/fixtures/margos/context-benchmark-v1.json",
     ROOT / "docs/MARGOS_PRIVACY_REVIEW.md",
     ROOT / "tests/test_margos_context_evaluation.py",
+    ROOT / "scripts/benchmark_margos_trace.py",
+    ROOT / "tests/fixtures/margos/trace-benchmark-v1.json",
+    ROOT / "tests/test_margos_trace_benchmark.py",
+    MARGOS / "schemas/trace-benchmark-v1.schema.json",
+    MARGOS / "schemas/jev-calibration-binding-v1.schema.json",
     MARGOS / "contracts/host-compaction-policy-v1.json",
     MARGOS / "schemas/host-compaction-request-v1.schema.json",
     MARGOS / "schemas/host-compaction-result-v1.schema.json",
@@ -51,6 +56,16 @@ for key in (
 check(float(gates.get("minimum_aggregate_serialized_reduction_ratio", 0)) >= 0.40, "context reduction gate must remain meaningful")
 
 fixture_text = fixture_path.read_text(encoding="utf-8") if fixture_path.is_file() else ""
+trace_fixture_path = ROOT / "tests/fixtures/margos/trace-benchmark-v1.json"
+trace_fixture = {}
+if trace_fixture_path.is_file():
+    try:
+        trace_fixture = json.loads(trace_fixture_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid trace benchmark fixture: {exc}")
+check(trace_fixture.get("version") == "margos-trace-benchmark/v1", "trace benchmark fixture version drift")
+check(trace_fixture.get("redacted") is True, "committed trace fixture must declare redacted=true")
+trace_text = trace_fixture_path.read_text(encoding="utf-8") if trace_fixture_path.is_file() else ""
 secret_patterns = (
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
     r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}",
@@ -62,6 +77,13 @@ secret_patterns = (
 )
 for pattern in secret_patterns:
     check(re.search(pattern, fixture_text) is None, f"possible secret in committed context fixture: {pattern}")
+    check(re.search(pattern, trace_text) is None, f"possible secret in committed trace fixture: {pattern}")
+
+trace_benchmark = ROOT / "scripts/benchmark_margos_trace.py"
+if trace_benchmark.is_file():
+    trace_source = trace_benchmark.read_text(encoding="utf-8")
+    for token in ("REDACTED_EVALUATION_ONLY", "harmful_omission_cases", "brier_mean", "ece_5_bin", "redacted"):
+        check(token in trace_source, f"trace benchmark missing contract: {token}")
 
 benchmark = ROOT / "scripts/benchmark_margos_context.py"
 if benchmark.is_file():
@@ -116,6 +138,7 @@ ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
 check("MARGOS evaluation/privacy contract" in ci, "CI must run Phase 4 evaluation/privacy validator")
 check("MARGOS frozen context benchmark (policy)" in ci, "CI must run deterministic policy context benchmark")
 check("MARGOS frozen context benchmark (fixture)" in ci, "CI must run fixture Context Reflex benchmark")
+check("MARGOS redacted trace benchmark" in ci, "CI must run privacy-safe redacted trace benchmark")
 check("--mode jev" not in ci, "CI must never run live Jev context benchmark")
 check("TYPESAFE_API_KEY" not in ci, "CI must not inject TypeSafe credentials")
 
