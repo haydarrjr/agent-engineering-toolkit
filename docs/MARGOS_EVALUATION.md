@@ -148,3 +148,11 @@ A live run may report Brier/ECE and false-omit/false-keep observations against t
 The Phase 4 privacy review is `docs/MARGOS_PRIVACY_REVIEW.md`. It confirms the portable default remains metadata/bounded-context only and CI is synthetic/offline.
 
 `margos_host_compaction.py` defines only a host-neutral proposal contract. Root transcript interception requires explicit experimental opt-in, a proven host hook, a `DERIVED_VIEW`, unchanged canonical source, and sufficient reduction. Codex/Copilot continue using the Phase 3 child-bundle baseline unless a future stable host contract is observed.
+
+## JEV v2 redacted trace evaluation
+
+`scripts/benchmark_margos_trace.py` accepts the public `margos-trace-benchmark/v1` format. The committed fixture is synthetic; maintainers may point `--input` at a local redacted Codex/MARGOS export. Inputs must declare `redacted=true` and pass secret-pattern screening.
+
+The trace harness evaluates both routing and context cases and reports route/context success, abstention, hard Policy-boundary violations, harmful omission, rehydration count, context reduction, Brier score, and five-bin ECE where probability labels exist. It uses recorded fixture probabilities, not a live provider, in CI.
+
+A live provider remains a separate explicitly authorized research step. Calibration can only be promoted with a pinned model and a matching `margos-jev-calibration/v1` binding. `jev-latest` is intentionally unsuitable for a persistent calibrated claim because the alias can move.
