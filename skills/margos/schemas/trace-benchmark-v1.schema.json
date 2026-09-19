@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Redacted Trace Benchmark v1",
+  "type": "object",
+  "required": ["version","cases"],
+  "properties": {
+    "version": {"const": "margos-trace-benchmark/v1"},
+    "description": {"type": "string"},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id","kind"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "kind": {"enum": ["routing","context"]},
+          "state": {"type": "object"},
+          "answers": {"type": "object"},
+          "gold_route": {"type": "object"},
+          "payloads": {"type": "object"},
+          "gold_actions": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
