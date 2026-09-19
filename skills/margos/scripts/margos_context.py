@@ -332,8 +332,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     view, receipt = materialize_context_view(_read(args.state), _read(args.payloads))
-    rendered = json.dumps({"view": view, "receipt": receipt}, indent=2, sort_keys=True, ensure_ascii=False) + "
-"
+    rendered = json.dumps({"view": view, "receipt": receipt}, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
