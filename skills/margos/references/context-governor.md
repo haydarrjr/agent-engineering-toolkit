@@ -52,3 +52,7 @@ Phase 4 adds the frozen counterfactual context benchmark, false-omit and rehydra
 The committed frozen corpus must preserve all binding/protected state, produce zero harmful omission on its deterministic verification oracle, and demonstrate meaningful serialized-context reduction. Fixture Brier/ECE values test the evaluator only; they are not live calibration evidence.
 
 Live Jev research is explicit opt-in and remains uncalibrated until the exact deployed model/version, endpoint, question-set hash, threshold policy, projection, corpus, and observed outcomes are evaluated together.
+
+## Semantic capsule enrichment
+
+Context Reflex remains metadata-first by default. A task may opt into bounded semantic enrichment through the Context View fields `remote_semantic_capsule_allowed=true` and `semantic_capsule_chars`. The kernel validates the exact payload hash locally, takes only an exact prefix up to the deterministic maximum, computes a capsule hash, and suppresses secret-like prefixes before the remote adapter sees them. This derived capsule is advisory context only and never replaces canonical evidence or rehydration.
