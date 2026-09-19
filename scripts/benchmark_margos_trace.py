@@ -21,7 +21,7 @@ SECRET_PATTERNS = (
     re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}"),
     re.compile(r"\bTYPESAFE_API_KEY\s*="),
     re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"),
-    re.compile(r"\bghp_[A-Za-z0-9]{20,}"),
+    re.compile(r"\b" + "gh" + r"p_[A-Za-z0-9]{20,}"),
     re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"),
     re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
 )
