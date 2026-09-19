@@ -17,7 +17,7 @@
     "items": {"type": "array", "items": {"$ref": "context-item-v1.schema.json"}},
     "view": {
       "type": "object",
-      "properties": {"head_chars": {"type": "integer", "minimum": 1}},
+      "properties": {"head_chars": {"type": "integer", "minimum": 1}, "remote_semantic_capsule_allowed": {"type": "boolean"}, "semantic_capsule_chars": {"type": "integer", "minimum": 0, "maximum": 512}},
       "additionalProperties": false
     }
   },
