@@ -104,7 +104,7 @@ privacy = ROOT / "docs/MARGOS_PRIVACY_REVIEW.md"
 if privacy.is_file():
     text = privacy.read_text(encoding="utf-8")
     lower = text.lower()
-    for token in ("typesafe_api_key", "full private transcripts", "runtime-only", "synthetic", "canonical aet evidence"):
+    for token in ("typesafe_api_key", "full private transcripts", "runtime-only", "synthetic", "canonical local item id"):
         check(token in lower, f"privacy review missing boundary: {token}")
 
 execution = MARGOS / "references/execution-layer.md"
