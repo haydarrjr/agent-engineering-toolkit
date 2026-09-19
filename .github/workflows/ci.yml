@@ -28,6 +28,8 @@ jobs:
         run: python scripts/validate_margos_host_adapters.py
       - name: MARGOS context contract
         run: python scripts/validate_margos_context.py
+      - name: MARGOS child-context contract
+        run: python scripts/validate_margos_handoff.py
       - name: Unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: MARGOS frozen routing benchmark

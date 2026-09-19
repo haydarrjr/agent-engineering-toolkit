@@ -17,7 +17,21 @@
     "policy_rules_applied":{"type":"array"},
     "reflex":{"type":"object"},
     "selected":{"type":"object"},
-    "host_execution":{"type":"object","required":["status"],"properties":{"status":{"enum":["PENDING","OBSERVED","UNKNOWN","FAILED"]}},"additionalProperties":true}
+    "host_execution":{"type":"object","required":["status"],"properties":{"status":{"enum":["PENDING","OBSERVED","UNKNOWN","FAILED"]}},"additionalProperties":true},
+    "context_binding":{
+      "type":"object",
+      "required":["status","child_id","role","context_receipt_schema_version","context_receipt_sha256","context_bundle_sha256","parent_context_receipt_sha256"],
+      "properties":{
+        "status":{"const":"BOUND"},
+        "child_id":{"type":"string","minLength":1},
+        "role":{"enum":["SCOUT","WORKER","VERIFIER","INDEPENDENT_CRITIC"]},
+        "context_receipt_schema_version":{"const":"margos-child-context-receipt/v1"},
+        "context_receipt_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "context_bundle_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"},
+        "parent_context_receipt_sha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}
+      },
+      "additionalProperties":false
+    }
   },
   "additionalProperties":false
 }

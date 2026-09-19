@@ -77,3 +77,22 @@ TYPESAFE_API_KEY=... python skills/margos/scripts/margos_context.py \
 Without `--reflex-provider jev`, no live provider is selected even when the environment contains a key. If Jev is selected without a key, the typed provider state is `NOT_CONFIGURED` and the adapter performs zero network requests.
 
 Phase 2 fixture tests establish contract behavior, not live calibration. Full-vs-compacted counterfactual evaluation, false-omit metrics, and live calibration remain Phase 4 work.
+
+
+## Phase 3 child-handoff gate
+
+`tests/fixtures/margos/child-role-contract-v1.json` freezes role-specific inclusion/exclusion expectations for Scout, Worker, Verifier, and Independent Critic.
+
+Phase 3 CI verifies:
+- required evidence coverage remains 1.0;
+- Policy-protected state is retained;
+- Scout and Critic do not inherit broad implementation payloads;
+- Worker receives owned-path context;
+- Verifier receives exact implementation + verification evidence;
+- child bundle serialized characters are lower than the full fixture payload characters;
+- route/context/bundle hashes bind consistently;
+- child rehydration requests can recover exposed content and cannot fetch unexposed context;
+- replay requiring authority recheck remains pending until explicitly approved;
+- a Context Reflex provider is invoked only once per handoff batch.
+
+These deterministic fixture checks demonstrate bounded-context reduction without a fixture-level evidence-coverage regression. They are not a live verified-success or model-calibration claim. Full counterfactual success, false-omit, rehydration-cost, and live Jev measurements remain Phase 4.
