@@ -11,7 +11,7 @@ All notable project changes are documented here.
 - Historical live A/B/C/D evaluation requested `jev-latest`, observed `jev-1.13.0`, and returned `JEV_PROMOTED_FOR_FROZEN_SUITE`; the corrected integration audit supersedes that claim with `JEV_NOT_PROMOTED` because remote latency produced no material downstream benefit.
 - Added malformed-output contract validation and bounded retry telemetry at the TypeSafe adapter boundary.
 
-## [Unreleased]
+## [1.3.1] - 2026-09-21
 
 ### JEV integration correction
 - Corrected TypeSafe structured paths to be relative to the request `state` object for routing and Context Reflex questions.
@@ -20,6 +20,8 @@ All notable project changes are documented here.
 - Superseded the historical `JEV_PROMOTED_FOR_FROZEN_SUITE` claim pending a fresh live run with the corrected protocol.
 - Implemented Issue #21 ValueOfCall admission over concrete executable operations, pooled session-scoped Jev transport, validated memoization/singleflight, metadata-first lazy retrieval, and bounded retrieval telemetry.
 - Added JEV v4 executable counterfactual benchmark arms with unique calibration/holdout partitions, warm replay, raw host/loader outcomes, and Policy-only default promotion gates.
+
+## [Unreleased]
 - Added official TypeSafe design-time conformance/freshness provenance and shadow-first rollout guidance without vendoring or making the skill a MARGOS runtime dependency.
 
 ## [1.2.0] - 2026-09-19
