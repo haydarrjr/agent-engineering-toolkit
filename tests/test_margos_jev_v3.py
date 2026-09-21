@@ -130,6 +130,7 @@ class JevV3ContractTests(unittest.TestCase):
             "routing_dataset": ROOT / "tests/fixtures/margos/routing-cases-v1.json",
             "context_dataset": ROOT / "tests/fixtures/margos/context-benchmark-v1.json",
             "min_routing_cases": 10, "min_context_cases": 10,
+            "workers": 1,
         })()
         report = benchmark.run(args)
         self.assertEqual(set(report["arms"]), set(benchmark.ARMS))

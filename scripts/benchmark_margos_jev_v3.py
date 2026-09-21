@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -257,6 +258,33 @@ def promotion_status(
     return "JEV_PROMOTED_FOR_FROZEN_SUITE"
 
 
+def run_cases(
+    cases: list[Mapping[str, Any]],
+    worker,
+    *,
+    workers: int,
+    label: str,
+    progress: bool,
+) -> list[dict[str, Any]]:
+    """Run independent cases with deterministic output order and bounded concurrency."""
+    if workers < 1:
+        raise ValueError("benchmark workers must be positive")
+    if workers == 1:
+        rows = []
+        for index, case in enumerate(cases, 1):
+            rows.append(worker(case))
+            if progress and (index == len(cases) or index % 25 == 0):
+                print(f"[benchmark] {label}: {index}/{len(cases)}", file=sys.stderr, flush=True)
+        return rows
+    rows = []
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="margos-bench") as pool:
+        for index, row in enumerate(pool.map(worker, cases), 1):
+            rows.append(row)
+            if progress and (index == len(cases) or index % 25 == 0):
+                print(f"[benchmark] {label}: {index}/{len(cases)}", file=sys.stderr, flush=True)
+    return rows
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     routing_doc = json.loads(args.routing_dataset.read_text(encoding="utf-8"))
     context_doc = json.loads(args.context_dataset.read_text(encoding="utf-8"))
@@ -315,14 +343,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         },
         "arms": {},
     }
+    workers = int(getattr(args, "workers", 1 if args.mode == "fixture" else 4))
     for arm in ARMS:
-        route_rows, context_rows = [], []
-        for case in routing_cases:
+        def run_route(case: Mapping[str, Any]) -> dict[str, Any]:
             route_provider, _ = providers_for_arm(arm, case, mode=args.mode, model=model)
             started = time.perf_counter()
             receipt = routing.decide(case["state"], route_provider)
-            route_rows.append(route_metrics(case, receipt, (time.perf_counter() - started) * 1000.0))
-        for case in context_cases:
+            return route_metrics(case, receipt, (time.perf_counter() - started) * 1000.0)
+
+        def run_context(case: Mapping[str, Any]) -> dict[str, Any]:
             _, context_provider = providers_for_arm(arm, case, mode=args.mode, model=model)
             state, payloads = context_benchmark.build_state(case)
             if arm == "D_POLICY_ROUTING_STAGED_EVIDENCE":
@@ -333,7 +362,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             bundle, child_receipt, _, parent_receipt = handoff.build_child_handoff(
                 route, state, payloads, contract, context_provider
             )
-            context_rows.append(context_metrics(case, child_receipt, parent_receipt, bundle, (time.perf_counter() - started) * 1000.0))
+            return context_metrics(case, child_receipt, parent_receipt, bundle, (time.perf_counter() - started) * 1000.0)
+
+        route_rows = run_cases(
+            routing_cases,
+            run_route,
+            workers=workers,
+            label=f"{arm} routing",
+            progress=args.mode == "live",
+        )
+        context_rows = run_cases(
+            context_cases,
+            run_context,
+            workers=workers,
+            label=f"{arm} context",
+            progress=args.mode == "live",
+        )
         report["arms"][arm] = {
             "routing": summarize(route_rows),
             "context": summarize(context_rows),
@@ -406,10 +450,13 @@ def main() -> int:
     parser.add_argument("--min-routing-cases", type=int, default=300)
     parser.add_argument("--min-context-cases", type=int, default=300)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--workers", type=int, default=4, help="bounded concurrent case workers for live runs")
     parser.add_argument("--strict", action="store_true")
     args = parser.parse_args()
     if args.min_routing_cases < 1 or args.min_context_cases < 1:
         parser.error("minimum case counts must be positive")
+    if args.workers < 1:
+        parser.error("workers must be positive")
     try:
         report = run(args)
     except (OSError, ValueError, RuntimeError, KeyError) as exc:
