@@ -8,7 +8,7 @@ All notable project changes are documented here.
 - Hardened routing with independent ambiguity, verification-risk, and direct-escalation thresholds plus deterministic Reflex Admission receipts.
 - Added versioned Context Reflex contracts, staged metadata/evidence evaluation, exact evidence capsules, runtime fingerprints, and forced A/B/C/D benchmark tooling.
 - Added the Issue #18 ReThinking and Agent Plugins surface audit with 20 classifications: 16 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, and 1 `UNVERIFIED`.
-- Historical live A/B/C/D evaluation requested `jev-latest`, observed `jev-1.13.0`, and returned `JEV_PROMOTED_FOR_FROZEN_SUITE`; that result is superseded by the corrected integration audit pending re-run.
+- Historical live A/B/C/D evaluation requested `jev-latest`, observed `jev-1.13.0`, and returned `JEV_PROMOTED_FOR_FROZEN_SUITE`; the corrected integration audit supersedes that claim with `JEV_NOT_PROMOTED` because remote latency produced no material downstream benefit.
 - Added malformed-output contract validation and bounded retry telemetry at the TypeSafe adapter boundary.
 
 ## [Unreleased]
