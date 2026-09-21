@@ -26,9 +26,9 @@ schema_names=(
     'context-item-v1.schema.json',
     'context-state-v1.schema.json',
     'context-decision-v1.schema.json',
-    'context-receipt-v1.schema.json',
-    'context-reflex-request-v1.schema.json',
-    'context-reflex-result-v1.schema.json',
+    'context-receipt-v2.schema.json',
+    'context-reflex-request-v2.schema.json',
+    'context-reflex-result-v2.schema.json',
 )
 for name in schema_names:
     path=MARGOS/'schemas'/name
@@ -40,7 +40,7 @@ for name in schema_names:
             errors.append(f'invalid context schema {name}: {exc}')
 
 contracts={}
-for name in ('context-question-set-v1.json','context-threshold-policy-v1.json'):
+for name in ('context-question-set-v2.json','context-threshold-policy-v2.json'):
     path=MARGOS/'contracts'/name
     check(path.is_file(),f'missing context contract: {name}')
     if path.is_file():
@@ -49,17 +49,18 @@ for name in ('context-question-set-v1.json','context-threshold-policy-v1.json'):
         except json.JSONDecodeError as exc:
             errors.append(f'invalid context contract {name}: {exc}')
 
-questions=contracts.get('context-question-set-v1.json',{})
-check(questions.get('version')=='margos-context-questions/v1','context question-set version drift')
+questions=contracts.get('context-question-set-v2.json',{})
+check(questions.get('version')=='margos-context-questions/v2','context question-set version drift')
 qitems=questions.get('questions',[])
 check(
     [x.get('id') for x in qitems if isinstance(x,dict)]==['keep_awareness','keep_full','replay_needed'],
-    'Context Reflex v1 question IDs/order drift',
+    'Context Reflex v2 question IDs/order drift',
 )
-check(all(isinstance(x,dict) and x.get('kind')=='noul' for x in qitems),'Context Reflex v1 must use atomic Noul questions')
+check(all(isinstance(x,dict) and x.get('kind')=='noul' for x in qitems),'Context Reflex v2 must use atomic Noul questions')
+check(all(isinstance(x,dict) and '`state.' in x.get('instructions','') for x in qitems),'Context Reflex questions must use explicit structured paths')
 
-thresholds=contracts.get('context-threshold-policy-v1.json',{})
-check(thresholds.get('version')=='margos-context-thresholds/v1','context threshold version drift')
+thresholds=contracts.get('context-threshold-policy-v2.json',{})
+check(thresholds.get('version')=='margos-context-thresholds/v2','context threshold version drift')
 for key in ('full_threshold','awareness_threshold','replay_risk_threshold','abstain_band'):
     value=thresholds.get(key)
     check(isinstance(value,(int,float)) and not isinstance(value,bool) and 0<=float(value)<=1,f'invalid context threshold: {key}')
@@ -77,12 +78,12 @@ check(rehydration.get('may_repeat_external_effect',{}).get('const') is False,'re
 sources=set(decision.get('properties',{}).get('decision_source',{}).get('enum',[]))
 check('REFLEX_ASSISTED' in sources and 'REFLEX_CONSERVATIVE_FALLBACK' in sources,'context decision schema missing Reflex composition sources')
 
-receipt=schemas.get('context-receipt-v1.schema.json',{})
+receipt=schemas.get('context-receipt-v2.schema.json',{})
 props=receipt.get('properties',{})
 check(props.get('authority',{}).get('const')=='DERIVED_VIEW','context receipt authority must be DERIVED_VIEW')
 check(props.get('canonical_source_mutated',{}).get('const') is False,'context receipt must prove canonical source is not mutated')
-check(props.get('question_set_version',{}).get('const')=='margos-context-questions/v1','context receipt must bind question-set version')
-check(props.get('threshold_policy_version',{}).get('const')=='margos-context-thresholds/v1','context receipt must bind threshold-policy version')
+check(props.get('question_set_version',{}).get('const')=='margos-context-questions/v2','context receipt must bind question-set version')
+check(props.get('threshold_policy_version',{}).get('const')=='margos-context-thresholds/v2','context receipt must bind threshold-policy version')
 threshold_pattern=props.get('threshold_policy_sha256',{}).get('pattern','')
 check(threshold_pattern.startswith('^[0-9a-f]{64}'),'context receipt must bind threshold-policy hash')
 provider_statuses=set(props.get('provider',{}).get('properties',{}).get('status',{}).get('enum',[]))
@@ -110,6 +111,8 @@ if kernel.is_file():
         'semantic_capsule_chars',
         'threshold_policy_sha256',
         'secret_patterns',
+        'margos_evidence_capsule',
+        'staged',
     ):
         check(token in text,f'MARGOS context kernel missing {token}')
     for forbidden in ('import requests','import httpx','urllib.request','session.compact','claude'):
@@ -119,7 +122,7 @@ adapter=MARGOS/'scripts/margos_reflex_jev.py'
 check(adapter.is_file(),'missing shared Jev Reflex adapter')
 if adapter.is_file():
     text=adapter.read_text(encoding='utf-8')
-    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','state.candidates['):
+    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','state.candidates[','extractor_version','CONTEXT_PROJECTION_VERSION'):
         check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
     check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
     check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')

@@ -1,0 +1,80 @@
+{
+  "version": "margos-questions/v2",
+  "questions": [
+    {
+      "id": "coordination_preference",
+      "kind": "choice",
+      "choices": ["DIRECT", "TRANSFER", "DELEGATED", "SERIALIZED"],
+      "instructions": "Which Policy-admissible coordination shape is the smallest safe shape that can close `state.task.verification_obligation` for `state.task.objective`?",
+      "criterion": "Choose only among the projected Policy-admissible coordination values.",
+      "criteria": {
+        "DIRECT": "The root session can close the obligation directly.",
+        "TRANSFER": "One bounded child transfer can close the obligation.",
+        "DELEGATED": "Multiple disjoint obligations can be executed in parallel safely.",
+        "SERIALIZED": "The work requires ordered execution or shared state prevents parallel delegation."
+      }
+    },
+    {
+      "id": "compute_preference",
+      "kind": "choice",
+      "choices": ["ECONOMY_READ", "BALANCED_EXEC", "FRONTIER_REASONING"],
+      "instructions": "Which Policy-admissible compute tier in `state.admissible.compute` is the lowest tier likely to close `state.task.verification_obligation` using `state.task`, `state.evidence`, and `state.budget`?",
+      "criterion": "Choose the lowest sufficient tier, preserving Policy and explicit constraints.",
+      "criteria": {
+        "ECONOMY_READ": "Bounded read-only work with no material execution or verification risk.",
+        "BALANCED_EXEC": "Ordinary implementation or verification work requiring execution.",
+        "FRONTIER_REASONING": "High ambiguity, failed verification, contradiction, cross-system impact, or high-impact correctness/security work."
+      }
+    },
+    {
+      "id": "task_ambiguity",
+      "kind": "score",
+      "levels": ["LOW", "MODERATE", "HIGH", "SEVERE"],
+      "instructions": "How much material ambiguity in `state.task.objective`, `state.task.requested_outcome`, and `state.task.verification_obligation` could change the implementation or verification route?",
+      "criterion": "Score only ambiguity that can change a safe downstream decision.",
+      "criteria": [
+        "LOW: the objective and verification obligation are explicit and route-stable.",
+        "MODERATE: some interpretation is needed but the safe route is probably stable.",
+        "HIGH: competing interpretations could change compute or coordination.",
+        "SEVERE: the declared obligation is materially unresolved or contradictory."
+      ]
+    },
+    {
+      "id": "verification_risk",
+      "kind": "score",
+      "levels": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+      "instructions": "How likely is the selected route to fail to close `state.task.verification_obligation`, given `state.evidence` and `state.admissible.compute`?",
+      "criterion": "Score downstream verification risk, not model prestige or prompt length.",
+      "criteria": [
+        "LOW: the route has a clear, cheap verification path.",
+        "MEDIUM: verification is available but may require additional local checks.",
+        "HIGH: evidence or route uncertainty makes verification failure plausible.",
+        "CRITICAL: existing failure, contradiction, or high-impact risk threatens closure."
+      ]
+    },
+    {
+      "id": "needs_escalation",
+      "kind": "noul",
+      "instructions": "Does `state.task`, `state.evidence`, and `state.budget` show that a stronger compute tier is required now to close `state.task.verification_obligation`?",
+      "criterion": "Answer yes only when the current lower tier is insufficient, not merely less convenient.",
+      "true": "The current lower tier is unlikely to close the obligation safely.",
+      "false": "A lower admissible tier can close the obligation with the available evidence."
+    },
+    {
+      "id": "needs_independent_critic",
+      "kind": "noul",
+      "instructions": "Does `state.task.verification_obligation` and `state.evidence` show that fresh-context falsification would materially improve the outcome within `state.admissible.coordination`?",
+      "criterion": "Answer yes only when independent criticism can change verification confidence.",
+      "true": "Independent fresh-context criticism is materially useful.",
+      "false": "Independent criticism would not materially improve the safe outcome."
+    },
+    {
+      "id": "transfer_sufficient",
+      "kind": "noul",
+      "instructions": "Can one bounded transfer close `state.task.verification_obligation` for `state.task.objective` without parallel delegation?",
+      "criterion": "Answer yes only when one transfer is sufficient and Policy-admissible.",
+      "true": "One bounded transfer is sufficient.",
+      "false": "The root must act directly or the work needs another coordination shape."
+    }
+  ]
+}

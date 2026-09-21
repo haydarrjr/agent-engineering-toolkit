@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Reflex Request v2",
+  "type": "object",
+  "required": ["schema_version", "routing_state", "admissible", "threshold_policy_sha256"],
+  "properties": {
+    "schema_version": {"const": "margos-reflex-request/v2"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "routing_state": {"type": "object"},
+    "admissible": {"type": "object", "required": ["coordination", "compute", "roles"]}
+  },
+  "additionalProperties": false
+}

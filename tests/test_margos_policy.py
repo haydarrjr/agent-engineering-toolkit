@@ -88,7 +88,7 @@ class MargosPolicyTests(unittest.TestCase):
         self.assertEqual(receipt['selected']['compute'],'FRONTIER_REASONING')
         self.assertGreaterEqual(
             receipt['reflex']['derived_signals']['task_ambiguity_high_probability'],
-            mod.THRESHOLDS['semantic_escalation'],
+            mod.THRESHOLDS['ambiguity_escalation'],
         )
 
     def test_high_verification_risk_probability_escalates_compute(self):
@@ -98,7 +98,7 @@ class MargosPolicyTests(unittest.TestCase):
         self.assertEqual(receipt['selected']['compute'],'FRONTIER_REASONING')
         self.assertGreaterEqual(
             receipt['reflex']['derived_signals']['verification_risk_high_probability'],
-            mod.THRESHOLDS['semantic_escalation'],
+            mod.THRESHOLDS['verification_escalation'],
         )
 
     def test_receipt_is_proposed_not_execution_proof(self):

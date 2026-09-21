@@ -19,10 +19,11 @@ required = (
     ROOT / "docs/MARGOS_PRIVACY_REVIEW.md",
     ROOT / "tests/test_margos_context_evaluation.py",
     ROOT / "scripts/benchmark_margos_trace.py",
+    ROOT / "scripts/benchmark_margos_jev_v3.py",
     ROOT / "tests/fixtures/margos/trace-benchmark-v1.json",
     ROOT / "tests/test_margos_trace_benchmark.py",
     MARGOS / "schemas/trace-benchmark-v1.schema.json",
-    MARGOS / "schemas/jev-calibration-binding-v1.schema.json",
+    MARGOS / "schemas/jev-calibration-binding-v2.schema.json",
     MARGOS / "contracts/host-compaction-policy-v1.json",
     MARGOS / "schemas/host-compaction-request-v1.schema.json",
     MARGOS / "schemas/host-compaction-result-v1.schema.json",
@@ -100,6 +101,12 @@ if benchmark.is_file():
     ):
         check(token in text, f"context benchmark missing metric/boundary: {token}")
     check("--mode" in text and "fixture" in text and "jev" in text, "context benchmark must expose policy/fixture/live research modes")
+
+benchmark_v3 = ROOT / "scripts/benchmark_margos_jev_v3.py"
+if benchmark_v3.is_file():
+    text = benchmark_v3.read_text(encoding="utf-8")
+    for token in ("A_POLICY_ONLY", "B_POLICY_JEV_ROUTING", "C_POLICY_ROUTING_METADATA_CONTEXT", "D_POLICY_ROUTING_STAGED_EVIDENCE", "partition_isolation", "thresholds_frozen_before_holdout", "gold_labels_are_external_to_jev", "JEV_NOT_PROMOTED"):
+        check(token in text, f"JEV v3 benchmark missing contract: {token}")
 
 for name in (
     "host-compaction-policy-v1.json",

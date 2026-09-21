@@ -10,11 +10,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
-POLICY_VERSION = "margos-policy/v1"
-REFLEX_REQUEST_VERSION = "margos-reflex-request/v1"
+POLICY_VERSION = "margos-policy/v2"
+REFLEX_REQUEST_VERSION = "margos-reflex-request/v2"
+REFLEX_RESULT_VERSION = "margos-reflex-result/v2"
+ROUTE_RECEIPT_VERSION = "margos-route-receipt/v2"
 ROOT = Path(__file__).resolve().parents[1]
-QUESTION_DOC = json.loads((ROOT/"contracts/question-set-v1.json").read_text(encoding="utf-8"))
-THRESHOLD_DOC = json.loads((ROOT/"contracts/threshold-policy-v1.json").read_text(encoding="utf-8"))
+QUESTION_DOC = json.loads((ROOT/"contracts/question-set-v2.json").read_text(encoding="utf-8"))
+THRESHOLD_DOC = json.loads((ROOT/"contracts/threshold-policy-v2.json").read_text(encoding="utf-8"))
 QUESTION_SET_VERSION = QUESTION_DOC["version"]
 THRESHOLD_POLICY_VERSION = THRESHOLD_DOC["version"]
 QUESTION_SET = tuple(QUESTION_DOC["questions"])
@@ -22,12 +24,19 @@ THRESHOLDS = {
     key: float(THRESHOLD_DOC[key])
     for key in (
         "choice_min_margin",
-        "semantic_escalation",
-        "needs_escalation",
-        "needs_independent_critic",
+        "ambiguity_escalation",
+        "verification_escalation",
+        "direct_escalation",
+        "independent_critic",
         "transfer_sufficient",
     )
 }
+ROUTING_THRESHOLD_KEYS = frozenset(THRESHOLDS)
+
+
+def dead_thresholds() -> set[str]:
+    """Return threshold fields present in the contract but unused by routing."""
+    return set(THRESHOLD_DOC) - ROUTING_THRESHOLD_KEYS - {"version", "selection"}
 
 class Coordination(str, Enum):
     DIRECT="DIRECT"; TRANSFER="TRANSFER"; DELEGATED="DELEGATED"; SERIALIZED="SERIALIZED"
@@ -47,6 +56,27 @@ class CalibrationStatus(str, Enum):
 class ReflexProvider(Protocol):
     def evaluate(self, request: Mapping[str, Any], questions: tuple[dict[str, Any], ...]) -> Mapping[str, Any]: ...
 
+
+class AdmissionReason(str, Enum):
+    CALL_REFLEX = "CALL_REFLEX"
+    SKIP_POLICY_SUFFICIENT = "SKIP_POLICY_SUFFICIENT"
+    SKIP_NO_MATERIAL_ROUTE_DELTA = "SKIP_NO_MATERIAL_ROUTE_DELTA"
+    SKIP_HOST_CANNOT_EXPLOIT_RESULT = "SKIP_HOST_CANNOT_EXPLOIT_RESULT"
+    SKIP_BUDGET = "SKIP_BUDGET"
+    SKIP_DISABLED = "SKIP_DISABLED"
+
+
+@dataclass(frozen=True)
+class ReflexAdmission:
+    decision: str
+    reason: str
+    detail: str
+    policy_state_sha256: str
+
+    @property
+    def admitted(self) -> bool:
+        return self.decision == AdmissionReason.CALL_REFLEX.value
+
 @dataclass(frozen=True)
 class FixtureReflexProvider:
     answers: Mapping[str, Any]
@@ -54,7 +84,7 @@ class FixtureReflexProvider:
     def evaluate(self, request, questions):
         del request, questions
         return {
-            "schema_version":"margos-reflex-result/v1",
+            "schema_version":REFLEX_RESULT_VERSION,
             "provider":{"kind":self.provider_id,"status":"AVAILABLE","calibration_status":"UNCALIBRATED"},
             "question_set_sha256":question_set_sha256(),
             "answers":dict(self.answers),
@@ -91,11 +121,11 @@ def normalize_state(raw: Mapping[str, Any]) -> dict[str, Any]:
     constraint=auth.get("explicit_model_provider_constraint")
     if constraint is not None and not isinstance(constraint,str): raise ValueError("invalid model/provider constraint")
     return {
-      "schema_version":"margos-routing-state/v1",
-      "task":{"objective":str(task.get("objective","")),"task_kind":str(task.get("task_kind","GENERAL")),"mutation_kind":mutation,"requested_outcome":str(task.get("requested_outcome","")),"verification_obligation":str(task.get("verification_obligation",""))},
+      "schema_version":"margos-routing-state/v2",
+      "task":{"objective":str(task.get("objective","")),"task_kind":str(task.get("task_kind","GENERAL")),"mutation_kind":mutation,"requested_outcome":str(task.get("requested_outcome","")),"verification_obligation":str(task.get("verification_obligation","")),"trivial":_bool(task,"trivial")},
       "host":{"host_id":str(host.get("host_id","UNKNOWN")),"subagents_proven":_bool(host,"subagents_proven"),"per_child_model_control_proven":_bool(host,"per_child_model_control_proven"),"reasoning_control_proven":_bool(host,"reasoning_control_proven"),"concurrency_proven":_bool(host,"concurrency_proven"),"isolation_proven":_bool(host,"isolation_proven"),"available_compute_classes":list(dict.fromkeys(available))},
       "authority":{"explicit_model_provider_constraint":constraint,"remote_write_authorized":_bool(auth,"remote_write_authorized"),"destructive_or_production_authorized":_bool(auth,"destructive_or_production_authorized"),"unresolved_external_effect":_bool(auth,"unresolved_external_effect")},
-      "work_shape":{"obligation_count":max(0,int(work.get("obligation_count",1))),"overlapping_write_scopes":_bool(work,"overlapping_write_scopes"),"shared_state":_bool(work,"shared_state"),"parallel_safe":_bool(work,"parallel_safe")},
+      "work_shape":{"obligation_count":max(0,int(work.get("obligation_count",1))),"overlapping_write_scopes":_bool(work,"overlapping_write_scopes"),"shared_state":_bool(work,"shared_state"),"parallel_safe":_bool(work,"parallel_safe"),"route_equivalent":_bool(work,"route_equivalent")},
       "evidence":{"verification_failed":_bool(ev,"verification_failed"),"conflicting_sources":_bool(ev,"conflicting_sources"),"unresolved_ambiguity":_bool(ev,"unresolved_ambiguity"),"cross_system_impact":_bool(ev,"cross_system_impact"),"high_impact_correctness_or_security":_bool(ev,"high_impact_correctness_or_security")},
       "budget":{"max_children":max(0,int(budget.get("max_children",1))),"max_escalations":max(0,int(budget.get("max_escalations",1))),"cost_class":str(budget.get("cost_class","UNSPECIFIED")),"latency_class":str(budget.get("latency_class","UNSPECIFIED"))},
     }
@@ -134,6 +164,10 @@ def policy_pre_evaluate(raw: Mapping[str, Any]) -> dict[str, Any]:
     if mutation=="DESTRUCTIVE_OR_PRODUCTION" and not auth["destructive_or_production_authorized"]:
         rule("MARGOS-POL-003","Destructive or production effect is not authorized.")
         return _pre(state,"HALT",coordination,compute,roles,rules,blocked,None,False)
+    if state["task"]["trivial"]:
+        rule("MARGOS-POL-011", "Explicitly trivial work uses the direct lowest safe route.")
+        forced={"disposition":"PROCEED","coordination":"DIRECT","compute":_safe_compute(state,compute),"role":"PRIMARY"}
+        return _pre(state,"PROCEED",coordination,compute,roles,rules,blocked,forced,False)
     if mutation!="READ_ONLY" and "ECONOMY_READ" in compute:
         compute.remove("ECONOMY_READ"); block("compute","ECONOMY_READ","MARGOS-POL-004"); rule("MARGOS-POL-004","ECONOMY_READ is read-only.")
     if not state["host"]["subagents_proven"]:
@@ -157,6 +191,77 @@ def policy_pre_evaluate(raw: Mapping[str, Any]) -> dict[str, Any]:
 def _pre(state,disposition,coordination,compute,roles,rules,blocked,forced,reflex):
     return {"policy_version":POLICY_VERSION,"state":state,"state_sha256":_hash(state),"disposition":disposition,"admissible":{"coordination":coordination,"compute":compute,"roles":roles},"blocked":blocked,"rules":rules,"forced_route":forced,"reflex_useful":reflex}
 
+
+def admit_reflex(
+    pre: Mapping[str, Any],
+    *,
+    provider_enabled: bool = True,
+) -> ReflexAdmission:
+    """Decide locally whether a Reflex call can materially change a safe route."""
+    if not provider_enabled:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_DISABLED.value,
+            "Reflex provider is disabled or not configured.",
+            pre["state_sha256"],
+        )
+    if pre["disposition"] == "HALT" or pre["forced_route"]:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_POLICY_SUFFICIENT.value,
+            "Deterministic Policy already fixes the route or halts execution.",
+            pre["state_sha256"],
+        )
+    state = pre["state"]
+    if state["budget"]["max_escalations"] <= 0 or state["budget"]["max_children"] <= 0:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_BUDGET.value,
+            "The declared budget cannot exploit an alternate Reflex route.",
+            pre["state_sha256"],
+        )
+    host = state["host"]
+    if not host["subagents_proven"]:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_HOST_CANNOT_EXPLOIT_RESULT.value,
+            "The host has no proven subagent capability.",
+            pre["state_sha256"],
+        )
+    if state["work_shape"]["route_equivalent"]:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_NO_MATERIAL_ROUTE_DELTA.value,
+            "The caller marked the remaining routes as downstream-equivalent.",
+            pre["state_sha256"],
+        )
+    coordination = pre["admissible"]["coordination"]
+    compute = pre["admissible"]["compute"]
+    if len(coordination) <= 1 and len(compute) <= 1:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_NO_MATERIAL_ROUTE_DELTA.value,
+            "All Policy-admissible routes have the same downstream shape.",
+            pre["state_sha256"],
+        )
+    if not host["per_child_model_control_proven"] and len(compute) > 1:
+        # A provider cannot make a useful per-child compute choice when the host
+        # cannot prove that it can apply one.
+        meaningful_coordination = any(x != "DIRECT" for x in coordination)
+        if not meaningful_coordination:
+            return ReflexAdmission(
+                "SKIP",
+                AdmissionReason.SKIP_HOST_CANNOT_EXPLOIT_RESULT.value,
+                "The host cannot exploit alternate compute choices and has no alternate coordination shape.",
+                pre["state_sha256"],
+            )
+    return ReflexAdmission(
+        "CALL_REFLEX",
+        AdmissionReason.CALL_REFLEX.value,
+        "Multiple Policy-admissible routes have a material downstream difference.",
+        pre["state_sha256"],
+    )
+
 def build_reflex_request(pre: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": REFLEX_REQUEST_VERSION,
@@ -173,7 +278,7 @@ def _distribution(answer, options, qid):
     return {o:float(probs[o]) for o in options}
 
 def validate_reflex_result(result: Mapping[str, Any], pre: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(result,Mapping) or result.get("schema_version")!="margos-reflex-result/v1": raise ValueError("invalid Reflex schema")
+    if not isinstance(result,Mapping) or result.get("schema_version")!=REFLEX_RESULT_VERSION: raise ValueError("invalid Reflex schema")
     if result.get("question_set_sha256")!=question_set_sha256(): raise ValueError("wrong question set")
     provider=result.get("provider",{})
     if not isinstance(provider,Mapping) or provider.get("status")!="AVAILABLE": raise ValueError("provider unavailable")
@@ -192,7 +297,7 @@ def validate_reflex_result(result: Mapping[str, Any], pre: Mapping[str, Any]) ->
             p=a.get("probability")
             if not isinstance(p,(int,float)) or isinstance(p,bool) or not 0<=float(p)<=1: raise ValueError(f"invalid {qid}")
             validated[qid]={"probability":float(p)}
-    return {"schema_version":"margos-reflex-result/v1","provider":dict(provider),"question_set_sha256":result["question_set_sha256"],"answers":validated}
+    return {"schema_version":REFLEX_RESULT_VERSION,"provider":dict(provider),"question_set_sha256":result["question_set_sha256"],"answers":validated}
 
 def _margin(answer):
     vals = sorted((float(v) for v in answer["probabilities"].values()), reverse=True)
@@ -215,8 +320,13 @@ def reflex_signals(reflex: Mapping[str, Any] | None) -> dict[str, float]:
         "task_ambiguity_high_probability": ambiguity_high,
         "verification_risk_high_probability": verification_high,
         "needs_escalation_probability": needs_escalation,
-        "semantic_escalation_probability": max(
-            ambiguity_high, verification_high, needs_escalation
+        "ambiguity_escalates": ambiguity_high >= THRESHOLDS["ambiguity_escalation"],
+        "verification_escalates": verification_high >= THRESHOLDS["verification_escalation"],
+        "direct_escalates": needs_escalation >= THRESHOLDS["direct_escalation"],
+        "frontier_required": (
+            ambiguity_high >= THRESHOLDS["ambiguity_escalation"]
+            or verification_high >= THRESHOLDS["verification_escalation"]
+            or needs_escalation >= THRESHOLDS["direct_escalation"]
         ),
         "needs_independent_critic_probability": float(
             a["needs_independent_critic"]["probability"]
@@ -276,15 +386,11 @@ def compose_decision(pre, reflex=None):
     signals = reflex_signals(reflex)
     coordination = ca["value"]
     compute = co["value"]
-    if (
-        signals["semantic_escalation_probability"]
-        >= THRESHOLDS["semantic_escalation"]
-        and "FRONTIER_REASONING" in pre["admissible"]["compute"]
-    ):
+    if signals["frontier_required"] and "FRONTIER_REASONING" in pre["admissible"]["compute"]:
         compute = "FRONTIER_REASONING"
     critic = (
         signals["needs_independent_critic_probability"]
-        >= THRESHOLDS["needs_independent_critic"]
+        >= THRESHOLDS["independent_critic"]
     )
     if critic and "TRANSFER" in pre["admissible"]["coordination"]:
         coordination = "TRANSFER"
@@ -318,11 +424,27 @@ def _final(pre,candidate):
     if candidate["role"] not in pre["admissible"]["roles"]: raise ValueError("final role violates Policy")
     return {**candidate,"model_provider_constraint":state["authority"]["explicit_model_provider_constraint"]}
 
+
+def _provider_enabled(provider: ReflexProvider | None) -> bool:
+    if provider is None:
+        return False
+    probe = getattr(provider, "is_configured", None)
+    if callable(probe):
+        return bool(probe())
+    return True
+
 def decide(raw_state, provider: ReflexProvider | None = None):
     pre = policy_pre_evaluate(raw_state)
     reflex = None
     provider_meta = {"kind": "none", "status": "DISABLED", "calibration_status": "UNKNOWN"}
-    if provider is not None and pre["reflex_useful"] and pre["disposition"] != "HALT":
+    admission = admit_reflex(pre, provider_enabled=_provider_enabled(provider))
+    if provider is not None and not _provider_enabled(provider):
+        provider_meta = {
+            "kind": type(provider).__name__,
+            "status": "NOT_CONFIGURED",
+            "calibration_status": "UNKNOWN",
+        }
+    if admission.admitted:
         try:
             raw_reflex = provider.evaluate(build_reflex_request(pre), QUESTION_SET)
             if isinstance(raw_reflex, Mapping) and isinstance(raw_reflex.get("provider"), Mapping):
@@ -343,7 +465,7 @@ def decide(raw_state, provider: ReflexProvider | None = None):
             }
     decision = compose_decision(pre, reflex)
     return {
-        "schema_version": "margos-route-receipt/v1",
+        "schema_version": ROUTE_RECEIPT_VERSION,
         "decision_authority": "PROPOSED",
         "state_sha256": pre["state_sha256"],
         "policy_version": POLICY_VERSION,
@@ -352,6 +474,12 @@ def decide(raw_state, provider: ReflexProvider | None = None):
         "threshold_policy_version": THRESHOLD_POLICY_VERSION,
         "threshold_policy_sha256": threshold_policy_sha256(),
         "provider": provider_meta,
+        "admission": {
+            "decision": admission.decision,
+            "reason": admission.reason,
+            "detail": admission.detail,
+            "policy_state_sha256": admission.policy_state_sha256,
+        },
         "admissible": pre["admissible"],
         "blocked": pre["blocked"],
         "policy_rules_applied": pre["rules"],

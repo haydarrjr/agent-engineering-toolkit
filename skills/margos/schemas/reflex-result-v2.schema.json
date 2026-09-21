@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Reflex Result v2",
+  "type": "object",
+  "required": ["schema_version", "provider", "question_set_sha256", "answers"],
+  "properties": {
+    "schema_version": {"const": "margos-reflex-result/v2"},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider": {"type": "object", "required": ["kind", "status"]},
+    "answers": {"type": "object"}
+  },
+  "additionalProperties": false
+}

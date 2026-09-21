@@ -155,4 +155,10 @@ The Phase 4 privacy review is `docs/MARGOS_PRIVACY_REVIEW.md`. It confirms the p
 
 The trace harness evaluates both routing and context cases and reports route/context success, abstention, hard Policy-boundary violations, harmful omission, rehydration count, context reduction, Brier score, and five-bin ECE where probability labels exist. It uses recorded fixture probabilities, not a live provider, in CI.
 
-A live provider remains a separate explicitly authorized research step. Calibration can only be promoted with a pinned model and a matching `margos-jev-calibration/v1` binding. `jev-latest` is intentionally unsuitable for a persistent calibrated claim because the alias can move.
+A live provider remains a separate explicitly authorized research step. Calibration can only be promoted with a pinned model and a matching `margos-jev-calibration/v2` binding. `jev-latest` is intentionally unsuitable for a persistent calibrated claim because the alias can move. Issue #18 additionally requires disjoint calibration/holdout partitions, downstream-verification gold labels, and a runtime fingerprint bound to the exact policy, questions, thresholds, projection, extractor, model, protocol, and corpus.
+
+## Issue #18 forced-arm benchmark
+
+The four arms are assigned by `scripts/benchmark_margos_jev_v3.py`, not by the system under test: A is Policy-only; B adds JEV routing; C adds metadata-only Context Reflex; D adds staged evidence Context Reflex. The driver keeps case state, contracts, provenance, gold labels, and calibration/holdout partitions identical across arms. It reports raw verified success, false escalation/de-escalation, expensive-compute use, latency, JEV overhead, context reduction, rehydration, calibration metrics, safety counts, and the runtime fingerprint.
+
+The live command requires at least 300 routing and 300 context cases, resolves `/v1/models`, prefers pinned `jev-1.13.0`, and returns exactly one promotion status. Without `TYPESAFE_API_KEY`, it returns `live_status=NOT_RUN` and `JEV_NOT_PROMOTED` and must not be merged. Smaller fixture invocations are local smoke tests only.

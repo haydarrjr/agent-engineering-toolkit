@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Jev Calibration Binding v2",
+  "type": "object",
+  "required": ["version", "provider", "model", "question_set_sha256", "threshold_policy_sha256", "projection_version", "corpus_sha256", "evaluation_status"],
+  "properties": {
+    "version": {"const": "margos-jev-calibration/v2"},
+    "provider": {"const": "typesafe-jev"},
+    "model": {"type": "string", "minLength": 1},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "projection_version": {"enum": ["margos-jev-routing-projection/v2", "margos-jev-context-projection/v3"]},
+    "corpus_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "evaluation_status": {"const": "PASSED"},
+    "calibration_partition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "holdout_partition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "extractor_version": {"type": "string"}
+  },
+  "additionalProperties": false
+}

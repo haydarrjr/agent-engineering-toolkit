@@ -22,14 +22,25 @@ for ref in refs:
     check((MARGOS/'references'/ref).is_file(),f'missing MARGOS reference: {ref}')
     check(f'references/{ref}' in skill,f'MARGOS root does not route {ref}')
 
-for name in ('question-set-v1.json','threshold-policy-v1.json'):
+for name in ('question-set-v2.json','threshold-policy-v2.json'):
     path=MARGOS/'contracts'/name
     check(path.is_file(),f'missing MARGOS contract: {name}')
     if path.is_file():
         try: json.loads(path.read_text(encoding='utf-8'))
         except json.JSONDecodeError as exc: errors.append(f'invalid contract {name}: {exc}')
 
-for name in ('routing-state-v1.schema.json','reflex-request-v1.schema.json','reflex-result-v1.schema.json','route-decision-v1.schema.json','route-receipt-v1.schema.json','jev-calibration-binding-v1.schema.json'):
+question_doc = json.loads((MARGOS/'contracts/question-set-v2.json').read_text(encoding='utf-8'))
+for question in question_doc.get('questions', []):
+    check(isinstance(question.get('instructions'), str) and '`state.' in question['instructions'], f"question lacks a self-contained structured path: {question.get('id')}")
+    if question.get('kind') == 'choice':
+        check(set(question.get('criteria', {})) == set(question.get('choices', [])), f"Choice criteria are not exhaustive: {question.get('id')}")
+    elif question.get('kind') == 'score':
+        check(len(question.get('criteria', [])) == len(question.get('levels', [])), f"Score criteria do not cover levels: {question.get('id')}")
+        check('criterion' in question and 'instructions' in question, f"Score semantics are incomplete: {question.get('id')}")
+    elif question.get('kind') == 'noul':
+        check(isinstance(question.get('true'), str) and isinstance(question.get('false'), str), f"Noul criteria are incomplete: {question.get('id')}")
+
+for name in ('routing-state-v2.schema.json','reflex-request-v2.schema.json','reflex-result-v2.schema.json','route-decision-v1.schema.json','route-receipt-v2.schema.json','jev-calibration-binding-v2.schema.json'):
     path=MARGOS/'schemas'/name
     check(path.is_file(),f'missing MARGOS schema: {name}')
     if path.is_file():
@@ -40,7 +51,7 @@ kernel=MARGOS/'scripts/margos_decide.py'
 check(kernel.is_file(),'missing deterministic MARGOS decision kernel')
 if kernel.is_file():
     text=kernel.read_text(encoding='utf-8').lower()
-    for token in ('coordination','disposition','computetier','role','reflexprovider','margos-pol-001','decision_authority','--reflex-provider','semantic_escalation','threshold_policy_sha256'):
+    for token in ('coordination','disposition','computetier','role','reflexprovider','margos-pol-001','decision_authority','--reflex-provider','ambiguity_escalation','verification_escalation','direct_escalation','threshold_policy_sha256','admit_reflex'):
         check(token in text,f'MARGOS decision kernel missing {token}')
     for forbidden in ('import requests','import httpx','urllib.request','typesafe','api_key'):
         check(forbidden not in text,f'phase-2 kernel must not add remote provider coupling: {forbidden}')

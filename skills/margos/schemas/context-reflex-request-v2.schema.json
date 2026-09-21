@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Reflex Request v2",
+  "type": "object",
+  "required": ["schema_version", "task", "candidates", "question_set_sha256", "threshold_policy_sha256"],
+  "properties": {
+    "schema_version": {"const": "margos-context-reflex-request/v2"},
+    "task": {"type": "object", "required": ["objective", "verification_obligation"]},
+    "candidates": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["item_id", "kind", "source", "size", "evidence", "replay", "supersession", "recency", "admissible_actions"],
+        "properties": {
+          "item_id": {"type": "string"},
+          "semantic_capsule": {
+            "type": "object",
+            "required": ["status", "extractor_version", "extractor_kind", "payload_sha256", "characters"],
+            "properties": {
+              "status": {"enum": ["AVAILABLE", "SUPPRESSED_SECRET"]},
+              "extractor_version": {"type": "string"},
+              "extractor_kind": {"type": "string"},
+              "payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "text": {"type": "string", "maxLength": 512},
+              "exact_excerpts": {"type": "array", "items": {"type": "string"}},
+              "excerpt_sha256s": {"type": "array", "items": {"type": "string", "pattern": "^[0-9a-f]{64}$"}},
+              "characters": {"type": "integer", "minimum": 0, "maximum": 512},
+              "capsule_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "provenance": {"type": "object"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

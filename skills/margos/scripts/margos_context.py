@@ -7,25 +7,27 @@ import copy
 import hashlib
 import json
 import re
+import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
 import margos_decide as routing_core
+from margos_evidence_capsule import EXTRACTOR_VERSION, extract_evidence_capsule
 
-CONTEXT_POLICY_VERSION = "margos-context-policy/v1"
+CONTEXT_POLICY_VERSION = "margos-context-policy/v2"
 ITEM_VERSION = "margos-context-item/v1"
 STATE_VERSION = "margos-context-state/v1"
 DECISION_VERSION = "margos-context-decision/v1"
-RECEIPT_VERSION = "margos-context-receipt/v1"
 VIEW_VERSION = "margos-context-view/v1"
-CONTEXT_REFLEX_REQUEST_VERSION = "margos-context-reflex-request/v1"
-CONTEXT_REFLEX_RESULT_VERSION = "margos-context-reflex-result/v1"
+CONTEXT_REFLEX_REQUEST_VERSION = "margos-context-reflex-request/v2"
+CONTEXT_REFLEX_RESULT_VERSION = "margos-context-reflex-result/v2"
+RECEIPT_VERSION = "margos-context-receipt/v2"
 
 ROOT = Path(__file__).resolve().parents[1]
-QUESTION_DOC = json.loads((ROOT / "contracts/context-question-set-v1.json").read_text(encoding="utf-8"))
-THRESHOLD_DOC = json.loads((ROOT / "contracts/context-threshold-policy-v1.json").read_text(encoding="utf-8"))
+QUESTION_DOC = json.loads((ROOT / "contracts/context-question-set-v2.json").read_text(encoding="utf-8"))
+THRESHOLD_DOC = json.loads((ROOT / "contracts/context-threshold-policy-v2.json").read_text(encoding="utf-8"))
 QUESTION_SET_VERSION = QUESTION_DOC["version"]
 THRESHOLD_POLICY_VERSION = THRESHOLD_DOC["version"]
 QUESTION_SET = tuple(QUESTION_DOC["questions"])
@@ -42,6 +44,11 @@ THRESHOLDS = {
         "provider_failure_action",
     )
 }
+
+
+def dead_thresholds() -> set[str]:
+    """Return context threshold fields not consumed by Context Policy/Reflex."""
+    return set(THRESHOLD_DOC) - set(THRESHOLDS) - {"version", "selection"}
 
 
 class ContextAction(str, Enum):
@@ -454,14 +461,43 @@ def _semantic_capsule(
     ):
         return None
     payload = _exact_payload(item, payloads)
-    text = payload[: int(view["semantic_capsule_chars"])]
-    if any(pattern.search(text) for pattern in SECRET_PATTERNS):
-        return None
+    capsule = extract_evidence_capsule(
+        item,
+        payload,
+        task=state["task"],
+        budget=int(view["semantic_capsule_chars"]),
+    )
+    if capsule["status"] != "AVAILABLE":
+        return {
+            "status": capsule["status"],
+            "extractor_version": capsule["extractor_version"],
+            "extractor_kind": capsule["extractor_kind"],
+            "payload_sha256": capsule["payload_sha256"],
+            "exact_excerpts": [],
+            "excerpt_sha256s": [],
+            "characters": 0,
+            "provenance": {
+                "item_id": item["item_id"],
+                "tool": item["source"]["tool"],
+                "locator": item["source"]["locator"],
+            },
+        }
+    excerpts = list(capsule["exact_excerpts"])
     return {
-        "kind": "EXACT_PREFIX",
-        "text": text,
-        "characters": len(text),
-        "sha256": _hash_text(text),
+        "status": capsule["status"],
+        "extractor_version": capsule["extractor_version"],
+        "extractor_kind": capsule["extractor_kind"],
+        "payload_sha256": capsule["payload_sha256"],
+        "exact_excerpts": excerpts,
+        "excerpt_sha256s": list(capsule["excerpt_sha256s"]),
+        "text": "\n".join(excerpts),
+        "characters": len("\n".join(excerpts)),
+        "capsule_sha256": capsule["capsule_sha256"],
+        "provenance": {
+            "item_id": item["item_id"],
+            "tool": item["source"]["tool"],
+            "locator": item["source"]["locator"],
+        },
     }
 
 
@@ -640,73 +676,113 @@ def evaluate_context_reflex(
             "items_evaluated": 0,
         }
 
-    batches = _candidate_batches(state, candidates, payloads)
     all_answers: dict[str, Any] = {}
     aggregate_usage: dict[str, int] = {}
     request_count = 0
     network_request_count = 0
+    stage_request_count = {"METADATA_ONLY": 0, "EVIDENCE": 0}
+    stage_latency_ms = {"METADATA_ONLY": 0.0, "EVIDENCE": 0.0}
     provider_meta: dict[str, Any] = {
         "kind": type(provider).__name__,
         "status": "ERROR",
         "calibration_status": "UNKNOWN",
     }
-    for request in batches:
-        request_count += 1
-        try:
-            raw = provider.evaluate(request, QUESTION_SET)
-        except Exception as exc:  # bounded provider boundary
-            provider_meta = {
-                "kind": type(provider).__name__,
-                "status": "ERROR",
-                "calibration_status": "UNKNOWN",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-            break
+    def invoke(batches: list[dict[str, Any]], stage: str) -> bool:
+        nonlocal provider_meta, request_count, network_request_count
+        for request in batches:
+            request_count += 1
+            stage_request_count[stage] += 1
+            started = time.perf_counter()
+            try:
+                raw = provider.evaluate(request, QUESTION_SET)
+            except Exception as exc:  # bounded provider boundary
+                provider_meta = {
+                    "kind": type(provider).__name__,
+                    "status": "ERROR",
+                    "calibration_status": "UNKNOWN",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                stage_latency_ms[stage] += (time.perf_counter() - started) * 1000
+                return False
+            stage_latency_ms[stage] += (time.perf_counter() - started) * 1000
 
-        if isinstance(raw, Mapping) and isinstance(raw.get("provider"), Mapping):
-            provider_meta = dict(raw["provider"])
-        status = provider_meta.get("status")
-        network_value = provider_meta.get("network_request_count", 0)
-        if (
-            isinstance(network_value, int)
-            and not isinstance(network_value, bool)
-            and network_value >= 0
-        ):
-            network_request_count += network_value
-        _aggregate_usage(aggregate_usage, provider_meta)
+            if isinstance(raw, Mapping) and isinstance(raw.get("provider"), Mapping):
+                provider_meta = dict(raw["provider"])
+            status = provider_meta.get("status")
+            network_value = provider_meta.get("network_request_count", 0)
+            if (
+                isinstance(network_value, int)
+                and not isinstance(network_value, bool)
+                and network_value >= 0
+            ):
+                network_request_count += network_value
+            _aggregate_usage(aggregate_usage, provider_meta)
 
-        if status == "NOT_CONFIGURED":
+            if status in {"NOT_CONFIGURED", "ERROR"}:
+                return False
+            if status != "AVAILABLE":
+                provider_meta = {
+                    **provider_meta,
+                    "status": "ERROR",
+                    "error": f"unsupported provider status: {status}",
+                }
+                return False
+            try:
+                validated = validate_context_reflex_result(raw, request)
+            except (TypeError, ValueError, KeyError) as exc:
+                provider_meta = {
+                    **provider_meta,
+                    "status": "ERROR",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+                return False
+            all_answers.update(validated["answers"])
+        return True
+
+    metadata_batches = _candidate_batches(state, candidates, None)
+    metadata_ok = invoke(metadata_batches, "METADATA_ONLY")
+    unresolved: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    if metadata_ok:
+        for item, decision in candidates:
+            answer = all_answers.get(item["item_id"])
+            if not isinstance(answer, Mapping):
+                unresolved.append((item, decision))
+                continue
+            values = [
+                _probability(answer[qid]["probability"], qid)
+                for qid in ("keep_awareness", "keep_full", "replay_needed")
+            ]
+            thresholds = [
+                float(THRESHOLDS["awareness_threshold"]),
+                float(THRESHOLDS["full_threshold"]),
+                float(THRESHOLDS["replay_risk_threshold"]),
+            ]
+            if any(abs(value - threshold) <= float(THRESHOLDS["abstain_band"])
+                   for value, threshold in zip(values, thresholds)):
+                unresolved.append((item, decision))
+    if (
+        metadata_ok
+        and unresolved
+        and payloads is not None
+        and state["view"]["remote_semantic_capsule_allowed"]
+        and int(state["view"]["semantic_capsule_chars"]) > 0
+    ):
+        evidence_batches = _candidate_batches(state, unresolved, payloads)
+        if not invoke(evidence_batches, "EVIDENCE"):
             all_answers = {}
-            break
-        if status == "ERROR":
-            all_answers = {}
-            break
-        if status != "AVAILABLE":
-            provider_meta = {
-                **provider_meta,
-                "status": "ERROR",
-                "error": f"unsupported provider status: {status}",
-            }
-            all_answers = {}
-            break
-        try:
-            validated = validate_context_reflex_result(raw, request)
-        except (TypeError, ValueError, KeyError) as exc:
-            provider_meta = {
-                **provider_meta,
-                "status": "ERROR",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-            all_answers = {}
-            break
-        all_answers.update(validated["answers"])
 
     provider_meta = {
         **provider_meta,
         "request_count": request_count,
         "network_request_count": network_request_count,
         "items_evaluated": len(all_answers),
-        "batch_count": len(batches),
+        "batch_count": request_count,
+        "stage_request_count": stage_request_count,
+        "stage_latency_ms": {
+            key: round(value, 3) for key, value in stage_latency_ms.items()
+        },
+        "evidence_extractor_version": EXTRACTOR_VERSION,
+        "staged": True,
     }
     if aggregate_usage:
         provider_meta["usage"] = aggregate_usage

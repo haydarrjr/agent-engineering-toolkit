@@ -42,6 +42,8 @@ jobs:
         run: python scripts/benchmark_margos_context.py --mode fixture --strict
       - name: MARGOS redacted trace benchmark
         run: python scripts/benchmark_margos_trace.py --strict
+      - name: MARGOS JEV v3 forced-arm fixture benchmark
+        run: python scripts/benchmark_margos_jev_v3.py --mode fixture --min-routing-cases 10 --min-context-cases 10 --strict
       - name: Python harness self-test
         run: python skills/python-engineering-harness/scripts/self_test.py
       - name: Agent Plugin validation

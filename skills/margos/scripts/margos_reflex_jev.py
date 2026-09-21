@@ -19,12 +19,17 @@ import margos_decide as core
 
 DEFAULT_BASE_URL = "https://api.typesafe.ai"
 DEFAULT_MODEL = "jev-latest"
-CONTEXT_REQUEST_VERSION = "margos-context-reflex-request/v1"
-CONTEXT_RESULT_VERSION = "margos-context-reflex-result/v1"
+PINNED_MODEL = "jev-1.13.0"
+CONTEXT_REQUEST_VERSION = "margos-context-reflex-request/v2"
+CONTEXT_RESULT_VERSION = "margos-context-reflex-result/v2"
 ROUTING_PROJECTION_VERSION = "margos-jev-routing-projection/v2"
-CONTEXT_PROJECTION_VERSION = "margos-jev-context-projection/v2"
-CALIBRATION_BINDING_VERSION = "margos-jev-calibration/v1"
+CONTEXT_PROJECTION_VERSION = "margos-jev-context-projection/v3"
+CALIBRATION_BINDING_VERSION = "margos-jev-calibration/v2"
 Transport = Callable[[str, str, Mapping[str, Any], float], Mapping[str, Any]]
+
+
+def _environment_api_key() -> str:
+    return os.environ.get("TYPESAFE_API_KEY", "")
 
 _COORDINATION = {
     "DIRECT": "Keep the obligation on the root/integration session.",
@@ -133,7 +138,7 @@ def _result_version_for_request(request: Mapping[str, Any]) -> str:
     if request.get("schema_version") == CONTEXT_REQUEST_VERSION:
         return CONTEXT_RESULT_VERSION
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
-        return "margos-reflex-result/v1"
+        return core.REFLEX_RESULT_VERSION
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -241,10 +246,24 @@ def project_context_reflex_state(
         capsule = candidate.get("semantic_capsule")
         if isinstance(capsule, Mapping):
             projected_candidate["semantic_capsule"] = {
-                "kind": _clip(capsule.get("kind"), 32),
+                "status": _clip(capsule.get("status"), 32),
+                "extractor_version": _clip(capsule.get("extractor_version"), 64),
+                "extractor_kind": _clip(capsule.get("extractor_kind"), 64),
+                "payload_sha256": _clip(capsule.get("payload_sha256"), 64),
                 "text": _clip(capsule.get("text"), 512),
+                "exact_excerpts": [
+                    _clip(value, 512)
+                    for value in capsule.get("exact_excerpts", [])
+                    if isinstance(value, str)
+                ],
+                "excerpt_sha256s": [
+                    _clip(value, 64)
+                    for value in capsule.get("excerpt_sha256s", [])
+                    if isinstance(value, str)
+                ],
                 "characters": int(capsule.get("characters", 0)),
-                "sha256": _clip(capsule.get("sha256"), 64),
+                "capsule_sha256": _clip(capsule.get("capsule_sha256"), 64),
+                "provenance": dict(capsule.get("provenance", {})),
             }
         projected["candidates"].append(projected_candidate)
     return projected, mapping
@@ -256,19 +275,14 @@ def _choice_question(
     options = [x for x in question["choices"] if x in admissible]
     if len(options) <= 1:
         return None
-    descriptions = (
+    descriptions = question.get("criteria") or (
         _COORDINATION
         if question["id"] == "coordination_preference"
         else _COMPUTE
     )
-    path = (
-        "state.task, state.work_shape, state.evidence, state.admissible.coordination"
-        if question["id"] == "coordination_preference"
-        else "state.task, state.evidence, state.budget, state.admissible.compute"
-    )
     return {
         "type": "choice",
-        "instructions": f"Use {path}. {question['criterion']}",
+        "instructions": question.get("instructions", question["criterion"]),
         "criteria": {x: descriptions[x] for x in options},
     }
 
@@ -292,25 +306,19 @@ def _build_routing_payload(
             if item is not None:
                 payload_questions[qid] = item
         elif question["kind"] == "score":
-            path = (
-                "state.task.objective, state.task.requested_outcome, state.task.verification_obligation"
-                if qid == "task_ambiguity"
-                else "state.task.verification_obligation, state.evidence, state.admissible.compute"
-            )
             payload_questions[qid] = {
                 "type": "score",
-                "instructions": f"Use {path}. {question['criterion']}",
-                "criteria": _SCORE_LEVELS[qid],
+                "instructions": question.get("instructions", question["criterion"]),
+                "criteria": question.get("criteria") or _SCORE_LEVELS[qid],
             }
         elif question["kind"] == "noul":
-            paths = {
-                "needs_escalation": "state.task, state.evidence, state.budget, state.admissible.compute",
-                "needs_independent_critic": "state.task.verification_obligation, state.evidence, state.admissible.coordination",
-                "transfer_sufficient": "state.task, state.work_shape, state.admissible.coordination",
-            }
             payload_questions[qid] = {
                 "type": "noul",
-                "instructions": f"Use {paths[qid]}. {question['criterion']}",
+                "instructions": question.get("instructions", question["criterion"]),
+                "criteria": {
+                    "true": question.get("true", "The proposition is true."),
+                    "false": question.get("false", "The proposition is false."),
+                },
             }
         else:
             raise JevAdapterError(
@@ -330,14 +338,15 @@ def _build_context_payload(
         candidate_path = f"state.candidates[{index}]"
         for question in questions:
             if question.get("kind") != "noul":
-                raise JevAdapterError(
-                    "Context Reflex v1 supports atomic Noul questions only"
-                )
+                raise JevAdapterError("Context Reflex supports atomic Noul questions only")
             qid = question["id"]
+            instructions = str(question.get("instructions", question["criterion"]))
+            instructions = instructions.replace("state.candidates[current]", candidate_path)
             payload_questions[f"{candidate_key}_{qid}"] = {
                 "type": "noul",
                 "instructions": (
-                    f"Evaluate {candidate_path} against state.task. {question['criterion']}"
+                    f"Evaluate {candidate_path} against `state.task`. "
+                    f"{instructions}"
                 ),
                 "criteria": {
                     "true": question.get("true"),
@@ -399,6 +408,53 @@ def _http_transport(
     return decoded
 
 
+def resolve_available_models(
+    api_key: str | None = None,
+    base_url: str | None = None,
+    timeout: float = 15.0,
+) -> list[str]:
+    """Resolve provider model IDs at run time without exposing credentials."""
+    key = api_key if api_key is not None else _environment_api_key()
+    if not key:
+        return []
+    base = base_url or os.environ.get("TYPESAFE_BASE_URL", DEFAULT_BASE_URL)
+    if not base.startswith("https://"):
+        raise JevAdapterError("TypeSafe base URL must use HTTPS")
+    request = urllib.request.Request(
+        base.rstrip("/") + "/v1/models",
+        headers={
+            "Authorization": f"Bearer {key}",
+            "User-Agent": "agent-engineering-toolkit/margos-vnext",
+        },
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            decoded = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        raise JevAdapterError(f"TypeSafe model-list HTTP {exc.code}") from None
+    except urllib.error.URLError as exc:
+        raise JevAdapterError(
+            f"TypeSafe model-list transport error: {type(exc.reason).__name__}"
+        ) from None
+    except TimeoutError:
+        raise JevAdapterError("TypeSafe model-list request timed out") from None
+    except json.JSONDecodeError:
+        raise JevAdapterError("TypeSafe model-list returned invalid JSON") from None
+    if isinstance(decoded, Mapping):
+        values = decoded.get("data", decoded.get("models", []))
+    else:
+        values = decoded
+    if not isinstance(values, list):
+        raise JevAdapterError("TypeSafe model-list response must contain an array")
+    result = []
+    for value in values:
+        model_id = value.get("id") if isinstance(value, Mapping) else value
+        if isinstance(model_id, str) and model_id:
+            result.append(model_id)
+    return list(dict.fromkeys(result))
+
+
 def _choice_answer(
     raw: Mapping[str, Any], options: list[str]
 ) -> dict[str, Any]:
@@ -457,6 +513,9 @@ def _provider_meta(
     }
     if isinstance(raw.get("model"), str):
         provider["response_model"] = raw["model"]
+    for key in ("id", "request_id", "response_id"):
+        if isinstance(raw.get(key), str) and raw[key]:
+            provider["response_id" if key == "id" else key] = raw[key]
     if isinstance(raw.get("usage"), Mapping):
         provider["usage"] = dict(raw["usage"])
     return provider
@@ -519,7 +578,7 @@ def _to_routing_result(
                 raise JevAdapterError(f"missing Jev answer: {qid}")
             answers[qid] = _noul_answer(item)
     return {
-        "schema_version": "margos-reflex-result/v1",
+        "schema_version": core.REFLEX_RESULT_VERSION,
         "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
         "question_set_sha256": core.question_set_sha256(),
         "answers": answers,
@@ -580,16 +639,22 @@ class JevReflexProvider:
     transport: Transport | None = None
     calibration_binding: Mapping[str, Any] | None = None
 
+    def _runtime_key(self) -> str:
+        return (
+            _environment_api_key()
+            if self.api_key is None
+            else self.api_key
+        )
+
+    def is_configured(self) -> bool:
+        return bool(self._runtime_key())
+
     def evaluate(
         self,
         request: Mapping[str, Any],
         questions: tuple[dict[str, Any], ...],
     ) -> Mapping[str, Any]:
-        key = (
-            os.environ.get("TYPESAFE_API_KEY", "")
-            if self.api_key is None
-            else self.api_key
-        )
+        key = self._runtime_key()
         base = self.base_url or os.environ.get(
             "TYPESAFE_BASE_URL", DEFAULT_BASE_URL
         )
