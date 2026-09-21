@@ -88,9 +88,30 @@ class JevAdapterTests(unittest.TestCase):
     def test_routing_questions_reference_explicit_state_paths(self):
         pre=core.policy_pre_evaluate(state())
         payload=jev.build_jev_payload(core.build_reflex_request(pre),core.QUESTION_SET)
-        self.assertIn('state.task',payload['questions']['coordination_preference']['instructions'])
-        self.assertIn('state.admissible.compute',payload['questions']['compute_preference']['instructions'])
-        self.assertIn('state.task.verification_obligation',payload['questions']['verification_risk']['instructions'])
+        self.assertIn('`task.',payload['questions']['coordination_preference']['instructions'])
+        self.assertIn('`admissible.compute`',payload['questions']['compute_preference']['instructions'])
+        self.assertIn('`task.verification_obligation`',payload['questions']['verification_risk']['instructions'])
+        self.assertNotIn('`state.', json.dumps(payload['questions']))
+
+    def test_context_questions_use_paths_relative_to_state(self):
+        request = {
+            "schema_version": jev.CONTEXT_REQUEST_VERSION,
+            "task": {"objective": "inspect parser", "verification_obligation": "cite evidence"},
+            "candidates": [{
+                "item_id": "local-id",
+                "kind": "SOURCE",
+                "source": {"tool": "read_file", "locator": "parser.py"},
+            }],
+            "question_set_sha256": "a" * 64,
+        }
+        questions = json.loads(
+            (ROOT / "skills/margos/contracts/context-question-set-v2.json").read_text()
+        )["questions"]
+        payload = jev.build_jev_payload(request, tuple(questions), "jev-latest")
+        encoded = json.dumps(payload)
+        self.assertIn("candidates[0]", encoded)
+        self.assertIn("`task`", encoded)
+        self.assertNotIn("state.candidates", encoded)
 
     def test_policy_restricted_jev_result_still_validates(self):
         pre=core.policy_pre_evaluate(state(work_shape={'overlapping_write_scopes':True}))

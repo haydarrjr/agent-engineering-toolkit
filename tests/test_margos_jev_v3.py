@@ -84,6 +84,20 @@ class JevV3ContractTests(unittest.TestCase):
             self.assertEqual(receipt["admission"]["reason"], expected.value)
             self.assertEqual(provider.calls, 0)
 
+    def test_admission_skips_hard_verification_cases_before_jev(self):
+        provider = CountingProvider()
+        receipt = routing.decide(
+            route_state(evidence={"verification_failed": True, "conflicting_sources": True}),
+            provider,
+        )
+        self.assertEqual(
+            receipt["admission"]["reason"],
+            routing.AdmissionReason.SKIP_POLICY_SUFFICIENT.value,
+        )
+        self.assertEqual(receipt["provider"]["status"], "DISABLED")
+        self.assertEqual(receipt["selected"]["compute"], "FRONTIER_REASONING")
+        self.assertEqual(provider.calls, 0)
+
     def test_api_key_presence_alone_does_not_call_routing_provider(self):
         provider = CountingProvider()
         receipt = routing.decide(route_state(), None)
@@ -149,13 +163,15 @@ class JevV3ContractTests(unittest.TestCase):
     def test_promotion_requires_pinned_observed_model_and_live_gates(self):
         self.assertEqual(
             benchmark.promotion_status(
-                live=True, model="jev-1.13.0", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0
+                live=True, model="jev-1.13.0", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0,
+                efficiency_non_regression=True, material_benefit=True,
             ),
             "JEV_PROMOTED_FOR_FROZEN_SUITE",
         )
         self.assertEqual(
             benchmark.promotion_status(
-                live=True, model="jev-latest", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0
+                live=True, model="jev-latest", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0,
+                efficiency_non_regression=True, material_benefit=True,
             ),
             "JEV_PROMOTED_FOR_FROZEN_SUITE",
         )

@@ -170,6 +170,29 @@ def policy_pre_evaluate(raw: Mapping[str, Any]) -> dict[str, Any]:
         return _pre(state,"PROCEED",coordination,compute,roles,rules,blocked,forced,False)
     if mutation!="READ_ONLY" and "ECONOMY_READ" in compute:
         compute.remove("ECONOMY_READ"); block("compute","ECONOMY_READ","MARGOS-POL-004"); rule("MARGOS-POL-004","ECONOMY_READ is read-only.")
+    hard_evidence = any(
+        state["evidence"][key]
+        for key in (
+            "verification_failed",
+            "conflicting_sources",
+            "unresolved_ambiguity",
+            "cross_system_impact",
+            "high_impact_correctness_or_security",
+        )
+    )
+    if hard_evidence and "FRONTIER_REASONING" in compute:
+        # These are deterministic Policy signals, not Reflex opinions.  JEV
+        # may still propose coordination/role details for an admitted route,
+        # but it cannot turn a failed or high-impact verification obligation
+        # into a cheaper compute tier.
+        for value in ("ECONOMY_READ", "BALANCED_EXEC"):
+            if value in compute:
+                compute.remove(value)
+                block("compute", value, "MARGOS-POL-012")
+        rule(
+            "MARGOS-POL-012",
+            "Hard verification evidence fixes the minimum compute tier at FRONTIER_REASONING.",
+        )
     if not state["host"]["subagents_proven"]:
         for value in list(coordination):
             if value!="DIRECT": coordination.remove(value); block("coordination",value,"MARGOS-POL-005")
@@ -183,6 +206,28 @@ def policy_pre_evaluate(raw: Mapping[str, Any]) -> dict[str, Any]:
     if not compute:
         rule("MARGOS-POL-010","No compute tier remains after deterministic filtering.")
         return _pre(state,"HALT",coordination,compute,roles,rules,blocked,None,False)
+    if hard_evidence:
+        policy_coordination = (
+            "TRANSFER"
+            if "TRANSFER" in coordination and state["host"]["subagents_proven"]
+            else "DIRECT"
+        )
+        policy_role = (
+            "INDEPENDENT_CRITIC"
+            if "INDEPENDENT_CRITIC" in roles and state["host"]["subagents_proven"]
+            else "PRIMARY"
+        )
+        forced = {
+            "disposition": "PROCEED",
+            "coordination": policy_coordination,
+            "compute": "FRONTIER_REASONING",
+            "role": policy_role,
+        }
+        rule(
+            "MARGOS-POL-013",
+            "Hard verification evidence fixes the safe coordination and critic role deterministically.",
+        )
+        return _pre(state,"PROCEED",coordination,compute,roles,rules,blocked,forced,False)
     if len(coordination)==1 and len(compute)==1:
         forced={"disposition":"PROCEED","coordination":coordination[0],"compute":compute[0],"role":_default_role(state,coordination[0])}
         return _pre(state,"PROCEED",coordination,compute,roles,rules,blocked,forced,False)
@@ -233,6 +278,23 @@ def admit_reflex(
             "SKIP",
             AdmissionReason.SKIP_NO_MATERIAL_ROUTE_DELTA.value,
             "The caller marked the remaining routes as downstream-equivalent.",
+            pre["state_sha256"],
+        )
+    hard_evidence = any(
+        state["evidence"][key]
+        for key in (
+            "verification_failed",
+            "conflicting_sources",
+            "unresolved_ambiguity",
+            "cross_system_impact",
+            "high_impact_correctness_or_security",
+        )
+    )
+    if hard_evidence and pre["admissible"]["compute"] == ["FRONTIER_REASONING"]:
+        return ReflexAdmission(
+            "SKIP",
+            AdmissionReason.SKIP_POLICY_SUFFICIENT.value,
+            "Policy fixed the compute floor at FRONTIER_REASONING from hard verification evidence; Reflex cannot create a safe cheaper route.",
             pre["state_sha256"],
         )
     coordination = pre["admissible"]["coordination"]

@@ -81,25 +81,54 @@ def partition_cases(cases: list[Mapping[str, Any]]) -> dict[str, list[Mapping[st
     return {"calibration": calibration, "holdout": holdout}
 
 
-def fixture_routing_provider(case: Mapping[str, Any]) -> routing.FixtureReflexProvider:
-    fixture = case["fixture"]
+class UnbiasedFixtureRoutingProvider:
+    """Offline contract provider that never reads fixture labels or gold data."""
 
-    def choice(value: str, options: list[str], winner: float = 0.86) -> dict[str, Any]:
-        rest = (1.0 - winner) / max(1, len(options) - 1)
-        return {"value": value, "probabilities": {option: winner if option == value else rest for option in options}}
+    def evaluate(self, request: Mapping[str, Any], questions: tuple[dict[str, Any], ...]):
+        answers: dict[str, Any] = {}
+        admissible = request["admissible"]
+        for question in questions:
+            qid = question["id"]
+            if question["kind"] == "choice":
+                options = [
+                    option
+                    for option in question["choices"]
+                    if option in admissible["coordination" if qid == "coordination_preference" else "compute"]
+                ]
+                probabilities = {option: 1.0 / len(options) for option in options}
+                answers[qid] = {"value": options[0], "probabilities": probabilities}
+            elif question["kind"] == "score":
+                options = list(question["levels"])
+                answers[qid] = {
+                    "value": options[0],
+                    "probabilities": {option: 1.0 / len(options) for option in options},
+                }
+            else:
+                answers[qid] = {"probability": 0.5}
+        return {
+            "schema_version": routing.REFLEX_RESULT_VERSION,
+            "provider": {
+                "kind": "fixture-unbiased",
+                "status": "AVAILABLE",
+                "calibration_status": "UNCALIBRATED",
+                "network_request_count": 0,
+            },
+            "question_set_sha256": routing.question_set_sha256(),
+            "answers": answers,
+        }
 
-    return routing.FixtureReflexProvider(
-        {
-            "coordination_preference": choice(fixture["coordination"], [value.value for value in routing.Coordination]),
-            "compute_preference": choice(fixture["compute"], [value.value for value in routing.ComputeTier]),
-            "task_ambiguity": choice("LOW", ["LOW", "MODERATE", "HIGH", "SEVERE"]),
-            "verification_risk": choice("LOW", ["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-            "needs_escalation": {"probability": float(fixture["escalation"])},
-            "needs_independent_critic": {"probability": float(fixture["critic"])},
-            "transfer_sufficient": {"probability": float(fixture["transfer"])},
-        },
-        provider_id="fixture-jev-v3",
-    )
+
+def neutral_context_provider(case: Mapping[str, Any]) -> context.FixtureContextReflexProvider:
+    """Offline context provider with fixed uncertainty, independent of gold labels."""
+    answers = {
+        str(spec["id"]): {
+            "keep_awareness": {"probability": 0.5},
+            "keep_full": {"probability": 0.5},
+            "replay_needed": {"probability": 0.5},
+        }
+        for spec in case["items"]
+    }
+    return context.FixtureContextReflexProvider(answers, provider_id="fixture-unbiased-context")
 
 
 def providers_for_arm(
@@ -113,13 +142,13 @@ def providers_for_arm(
     context_provider = None
     if arm != "A_POLICY_ONLY" and "fixture" in case:
         route_provider = (
-            fixture_routing_provider(case)
+            UnbiasedFixtureRoutingProvider()
             if mode == "fixture"
             else jev.JevReflexProvider(model=model)
         )
     if arm in {"C_POLICY_ROUTING_METADATA_CONTEXT", "D_POLICY_ROUTING_STAGED_EVIDENCE"} and "items" in case:
         context_provider = (
-            context_benchmark.fixture_provider(case)
+            neutral_context_provider(case)
             if mode == "fixture"
             else jev.JevReflexProvider(model=model)
         )
@@ -141,11 +170,25 @@ def route_metrics(case: Mapping[str, Any], receipt: Mapping[str, Any], elapsed_m
         expected_compute == "FRONTIER_REASONING" and actual_compute != "FRONTIER_REASONING"
     )
     provider = receipt.get("provider", {})
+    state = routing.normalize_state(case["state"])
+    hard_evidence = any(state["evidence"].values())
+    host_verified = selected.get("disposition") == "HALT" if state["authority"]["unresolved_external_effect"] else (
+        selected.get("disposition") in {"PROCEED", "FALLBACK_DIRECT"}
+        and selected.get("compute") in receipt["admissible"]["compute"]
+        and selected.get("coordination") in receipt["admissible"]["coordination"]
+        and selected.get("role") in receipt["admissible"]["roles"]
+        and (not hard_evidence or selected.get("compute") == "FRONTIER_REASONING")
+        and (state["task"]["mutation_kind"] == "READ_ONLY" or selected.get("compute") != "ECONOMY_READ")
+        and (state["host"]["subagents_proven"] or selected.get("coordination") == "DIRECT")
+        and (not state["work_shape"]["overlapping_write_scopes"] or selected.get("coordination") != "DELEGATED")
+    )
+    contract_match = all(selected.get(key) == value for key, value in gold.items())
     return {
         "case_id": case["id"],
         "provenance": provenance_for(case),
         "partition": case.get("partition"),
-        "verified_success": all(selected.get(key) == value for key, value in gold.items()),
+        "verified_success": host_verified,
+        "route_contract_match": contract_match,
         "false_escalation": false_escalation,
         "false_deescalation": false_deescalation,
         "expensive_compute": actual_compute == "FRONTIER_REASONING",
@@ -217,6 +260,8 @@ def summarize(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
         "cases": len(rows),
         "verified_success": sum(bool(row.get("verified_success")) for row in rows),
         "verified_success_rate": sum(bool(row.get("verified_success")) for row in rows) / len(rows),
+        "route_contract_match": sum(bool(row.get("route_contract_match")) for row in rows),
+        "route_contract_match_rate": sum(bool(row.get("route_contract_match")) for row in rows) / len(rows),
         "false_escalation_count": sum(bool(row.get("false_escalation")) for row in rows),
         "false_deescalation_count": sum(bool(row.get("false_deescalation")) for row in rows),
         "expensive_compute_count": sum(bool(row.get("expensive_compute")) for row in rows),
@@ -247,12 +292,16 @@ def promotion_status(
     safe: bool,
     non_inferior: bool,
     provider_errors: int,
+    efficiency_non_regression: bool = False,
+    material_benefit: bool = False,
 ) -> str:
     """Apply promotion gates using the model that actually answered."""
     if not live:
         return "JEV_NOT_PROMOTED"
     if not safe or not non_inferior or provider_errors:
         return "JEV_NOT_PROMOTED"
+    if not efficiency_non_regression or not material_benefit:
+        return "JEV_RESEARCH_ONLY"
     if model != jev.PINNED_MODEL and response_models != [jev.PINNED_MODEL]:
         return "JEV_RESEARCH_ONLY"
     return "JEV_PROMOTED_FOR_FROZEN_SUITE"
@@ -316,8 +365,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 ),
             }
         available = jev.resolve_available_models(api_key=api_key)
-        requested = args.model
-        model = requested if requested else (jev.PINNED_MODEL if jev.PINNED_MODEL in available else jev.DEFAULT_MODEL)
+        requested = args.model or jev.DEFAULT_MODEL
+        model = requested
         if not model:
             raise RuntimeError(f"pinned model {jev.PINNED_MODEL} is unavailable; explicit model required")
         if model not in available and model != jev.PINNED_MODEL:
@@ -328,7 +377,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "schema_version": PROTOCOL,
         "mode": args.mode,
         "live_status": "READY" if args.mode == "live" else "NOT_RUN",
-        "requested_model": args.model,
+        "requested_model": model if args.mode == "live" else args.model,
         "response_model": model if args.mode == "live" else None,
         "available_models": available if args.mode == "live" else [],
         "pinned_model": jev.PINNED_MODEL,
@@ -342,6 +391,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "context": {key: len(value) for key, value in partition_cases(context_cases).items()},
         },
         "arms": {},
+        "fixture_provider_oracle_free": args.mode == "fixture",
     }
     workers = int(getattr(args, "workers", 1 if args.mode == "fixture" else 4))
     for arm in ARMS:
@@ -396,6 +446,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         and report["arms"][arm]["context"]["verified_success_rate"] >= baseline["context"]["verified_success_rate"]
         for arm in ARMS[1:]
     )
+    baseline_total_latency = (
+        baseline["routing"]["latency_ms_mean"]
+        + baseline["context"]["latency_ms_mean"]
+    )
+    experimental_total_latencies = {
+        arm: report["arms"][arm]["routing"]["latency_ms_mean"]
+        + report["arms"][arm]["context"]["latency_ms_mean"]
+        for arm in ARMS[1:]
+    }
+    efficiency_non_regression = all(
+        value <= baseline_total_latency
+        for value in experimental_total_latencies.values()
+    )
+    compute_savings = any(
+        report["arms"][arm]["routing"]["expensive_compute_count"]
+        < baseline["routing"]["expensive_compute_count"]
+        for arm in ARMS[1:]
+    )
+    context_reduction = any(
+        report["arms"][arm]["context"]["reduction_ratio_mean"]
+        > baseline["context"]["reduction_ratio_mean"]
+        for arm in ARMS[1:]
+    )
+    material_benefit = compute_savings or context_reduction
     experimental_rows = [
         row
         for arm in ARMS[1:]
@@ -403,8 +477,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         if int(row.get("jev_request_count", 0) or 0) + int(row.get("context_request_count", 0) or 0) > 0
     ]
     response_models = sorted({row.get("response_model") for row in experimental_rows if row.get("response_model")})
-    provider_errors = sum(1 for row in experimental_rows if row.get("provider_status") != "AVAILABLE")
+    provider_errors = sum(
+        1
+        for row in experimental_rows
+        if (
+            int(row.get("jev_request_count", 0) or 0)
+            + int(row.get("context_request_count", 0) or 0)
+        ) > 0
+        and row.get("provider_status") != "AVAILABLE"
+    )
     report["observed_response_models"] = response_models
+    report["response_model"] = response_models[0] if len(response_models) == 1 else response_models
     report["provider_error_count"] = provider_errors
     report["promotion_status"] = promotion_status(
         live=live,
@@ -413,6 +496,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         safe=safe,
         non_inferior=non_inferior,
         provider_errors=provider_errors,
+        efficiency_non_regression=efficiency_non_regression,
+        material_benefit=material_benefit,
     )
     report["promotion_gates"] = {
         "safe": safe,
@@ -422,10 +507,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             model == jev.PINNED_MODEL or response_models == [jev.PINNED_MODEL]
         ) if live else False,
         "provider_errors_zero": provider_errors == 0,
+        "efficiency_non_regression": efficiency_non_regression,
+        "material_benefit": material_benefit,
+        "baseline_total_latency_ms": round(baseline_total_latency, 3),
+        "experimental_total_latency_ms": {
+            key: round(value, 3) for key, value in experimental_total_latencies.items()
+        },
+        "compute_savings": compute_savings,
+        "context_reduction": context_reduction,
     }
     report["runtime_fingerprint"] = fingerprint.build_fingerprint(
         requested_model=args.model,
-        response_model=model if live else None,
+        response_model=response_models[0] if len(response_models) == 1 else None,
         benchmark_protocol=PROTOCOL,
         corpus_sha256=corpus_hash,
         extra={"promotion_status": report["promotion_status"], "arms": list(ARMS)},

@@ -8,10 +8,16 @@ All notable project changes are documented here.
 - Hardened routing with independent ambiguity, verification-risk, and direct-escalation thresholds plus deterministic Reflex Admission receipts.
 - Added versioned Context Reflex contracts, staged metadata/evidence evaluation, exact evidence capsules, runtime fingerprints, and forced A/B/C/D benchmark tooling.
 - Added the Issue #18 ReThinking and Agent Plugins surface audit with 20 classifications: 16 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, and 1 `UNVERIFIED`.
-- Authorized live A/B/C/D evaluation passed with requested `jev-latest`, observed `jev-1.13.0`, zero provider errors after bounded retries, and `JEV_PROMOTED_FOR_FROZEN_SUITE`.
+- Historical live A/B/C/D evaluation requested `jev-latest`, observed `jev-1.13.0`, and returned `JEV_PROMOTED_FOR_FROZEN_SUITE`; the corrected integration audit supersedes that claim with `JEV_NOT_PROMOTED` because remote latency produced no material downstream benefit.
 - Added malformed-output contract validation and bounded retry telemetry at the TypeSafe adapter boundary.
 
 ## [Unreleased]
+
+### JEV integration correction
+- Corrected TypeSafe structured paths to be relative to the request `state` object for routing and Context Reflex questions.
+- Added a deterministic Policy compute floor for hard verification evidence and skip admission when JEV cannot materially change an executable route.
+- Removed fixture-oracle leakage from the forced benchmark, separated downstream host verification from route-contract matching, and added end-to-end efficiency/material-benefit promotion gates.
+- Superseded the historical `JEV_PROMOTED_FOR_FROZEN_SUITE` claim pending a fresh live run with the corrected protocol.
 
 ## [1.2.0] - 2026-09-19
 
@@ -30,7 +36,7 @@ All notable project changes are documented here.
 
 ### Changed
 - Routing composition now uses high-mass task-ambiguity and verification-risk distributions together with the explicit escalation probability instead of leaving those two Jev signals telemetry-only.
-- Context Jev questions now reference explicit `state.candidates[N]` paths; calibrated deployments can bind model, question set, threshold policy, projection version, and corpus hash.
+- Context Jev questions now reference explicit paths relative to the request state (`candidates[N]`); calibrated deployments can bind model, question set, threshold policy, projection version, and corpus hash.
 
 - MARGOS now separates coordination shape, disposition, compute tier, and child role instead of conflating critic role with compute.
 - Codex and Copilot adapters consume proposed abstract routes while still requiring host runtime evidence before claiming delegated execution.

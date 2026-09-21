@@ -285,7 +285,8 @@ class ContextReflexTests(unittest.TestCase):
         self.assertEqual(len(capsule["payload_sha256"]), 64)
         self.assertEqual(len(capsule["excerpt_sha256s"]), len(capsule["exact_excerpts"]))
         for question in seen["payloads"][1]["questions"].values():
-            self.assertIn("state.candidates[0]", question["instructions"])
+            self.assertIn("candidates[0]", question["instructions"])
+            self.assertNotIn("state.candidates", question["instructions"])
 
     def test_semantic_capsule_suppresses_secret_like_prefix(self):
         seen = {}
