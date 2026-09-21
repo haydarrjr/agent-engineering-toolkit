@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Value of Call Receipt v1",
+  "type": "object",
+  "required": ["schema_version", "decision", "reason", "opportunity_id", "operation_that_can_be_avoided", "fallback_operation_id", "max_possible_saving", "jev_latency_budget_ms", "host_can_exploit_result"],
+  "properties": {
+    "schema_version": {"const": "margos-value-of-call-receipt/v1"},
+    "decision": {"enum": ["CALL_REFLEX", "SKIP"]},
+    "reason": {"type": "string", "minLength": 1},
+    "detail": {"type": "string"},
+    "opportunity_id": {"type": "string"},
+    "operation_that_can_be_avoided": {"type": ["string", "null"]},
+    "fallback_operation_id": {"type": ["string", "null"]},
+    "candidate_operation_ids": {"type": "array", "items": {"type": "string"}},
+    "max_possible_saving": {"type": "object"},
+    "jev_latency_budget_ms": {"type": "number", "minimum": 0},
+    "host_can_exploit_result": {"type": "boolean"},
+    "critical_path": {"type": "boolean"},
+    "cache_lookup_status": {"type": "string"},
+    "policy_fallback": {"type": "string"},
+    "calibration_status": {"type": "string"}
+  },
+  "additionalProperties": true
+}

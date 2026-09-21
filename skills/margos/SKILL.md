@@ -26,6 +26,7 @@ Load only the reference that owns the current decision:
 - [reflex confidence](references/reflex-confidence.md) for probability/calibration boundaries.
 - [optional Reflex provider](references/reflex-provider.md) only when an external Reflex backend is explicitly configured or evaluated.
 - [execution layer](references/execution-layer.md) for abstract-route to host-native execution mapping.
+- [value-of-call and retrieval contracts](references/value-of-call.md) for concrete executable opportunities, deterministic semantic admission, metadata-first lazy retrieval, and conservative fallback.
 - [model routing](references/model-routing.md) for compute tiers and escalation/de-escalation signals.
 - [Codex host adapter](references/host-codex.md) when Codex native subagents are available.
 - [Copilot/VS Code host adapter](references/host-copilot.md) when GitHub Copilot custom agents or VS Code subagents are available.
@@ -33,3 +34,9 @@ Load only the reference that owns the current decision:
 - [external effects](references/external-effects.md) for destructive, production, credentialed, or irreversible mutations.
 
 The default contract helper is [margos_decide.py](scripts/margos_decide.py). Its deterministic/provider-neutral path is offline by default; an external Reflex adapter is used only when the caller explicitly selects one and passes the deterministic Reflex Admission gate. The offline context helper is [margos_context.py](scripts/margos_context.py); it materializes derived Context Views without mutating canonical evidence. Evidence capsules are locally extracted, exact, hash-bound, budgeted, and secret-screened. External providers are optional, fail closed, and are never required for ordinary MARGOS use. Finish with the requested result, host evidence for delegated work, and unresolved capability or reconciliation state. MARGOS remains explicit-only for ordinary engineering work.
+
+Issue #21 adds `margos_value.py` for deterministic value-of-call admission,
+`margos_retrieval.py` for metadata-only planning followed by lazy payload
+materialization, and the executable counterfactual benchmark for forced
+counterfactual arms. `decide(..., shadow=True)` records a typed judgment while
+preserving the Policy fallback for first-stage domain calibration.

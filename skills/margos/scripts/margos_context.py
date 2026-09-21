@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import re
@@ -39,6 +40,8 @@ THRESHOLDS = {
         "replay_risk_threshold",
         "abstain_band",
         "max_items_per_batch",
+        "max_request_tokens",
+        "max_batch_workers",
         "max_projection_chars",
         "max_semantic_capsule_chars",
         "provider_failure_action",
@@ -530,7 +533,7 @@ def _candidate_projection(
         "admissible_actions": list(decision["admissible_actions"]),
     }
     capsule = _semantic_capsule(item, state, payloads)
-    if capsule is not None:
+    if capsule is not None and capsule.get("status") == "AVAILABLE":
         projected["semantic_capsule"] = capsule
     return projected
 
@@ -563,6 +566,7 @@ def _candidate_batches(
     payloads: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     max_items = int(THRESHOLDS["max_items_per_batch"])
+    max_tokens = int(THRESHOLDS["max_request_tokens"])
     max_chars = int(THRESHOLDS["max_projection_chars"])
     if max_items < 1 or max_chars < 1:
         raise ValueError("invalid Context Reflex batch budget")
@@ -571,7 +575,12 @@ def _candidate_batches(
     for pair in candidates:
         trial = current + [pair]
         request = build_context_reflex_request(state, trial, payloads)
-        exceeds = len(trial) > max_items or len(_canon(request)) > max_chars
+        estimated_tokens = (len(_canon(request)) + 3) // 4
+        exceeds = (
+            len(trial) > max_items
+            or len(_canon(request)) > max_chars
+            or estimated_tokens > max_tokens
+        )
         if current and exceeds:
             batches.append(build_context_reflex_request(state, current, payloads))
             current = [pair]
@@ -689,26 +698,45 @@ def evaluate_context_reflex(
     }
     def invoke(batches: list[dict[str, Any]], stage: str) -> bool:
         nonlocal provider_meta, request_count, network_request_count
-        for request in batches:
-            request_count += 1
-            stage_request_count[stage] += 1
+        def call_one(request: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, dict[str, Any], float, str | None]:
             started = time.perf_counter()
             try:
                 raw = provider.evaluate(request, QUESTION_SET)
             except Exception as exc:  # bounded provider boundary
-                provider_meta = {
+                return None, {
                     "kind": type(provider).__name__,
                     "status": "ERROR",
                     "calibration_status": "UNKNOWN",
                     "error": f"{type(exc).__name__}: {exc}",
-                }
-                stage_latency_ms[stage] += (time.perf_counter() - started) * 1000
-                return False
-            stage_latency_ms[stage] += (time.perf_counter() - started) * 1000
+                }, (time.perf_counter() - started) * 1000, "provider"
 
+            latency = (time.perf_counter() - started) * 1000
             if isinstance(raw, Mapping) and isinstance(raw.get("provider"), Mapping):
-                provider_meta = dict(raw["provider"])
-            status = provider_meta.get("status")
+                meta = dict(raw["provider"])
+            else:
+                meta = {"kind": type(provider).__name__, "status": "ERROR", "calibration_status": "UNKNOWN"}
+            status = meta.get("status")
+            if status in {"NOT_CONFIGURED", "ERROR"}:
+                return raw if isinstance(raw, Mapping) else None, meta, latency, "unavailable"
+            if status != "AVAILABLE":
+                return raw if isinstance(raw, Mapping) else None, {**meta, "status": "ERROR", "error": f"unsupported provider status: {status}"}, latency, "unavailable"
+            try:
+                validated = validate_context_reflex_result(raw, request)
+            except (TypeError, ValueError, KeyError) as exc:
+                return raw if isinstance(raw, Mapping) else None, {**meta, "status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}, latency, "invalid"
+            return validated, meta, latency, None
+
+        workers = min(max(1, int(THRESHOLDS["max_batch_workers"])), max(1, len(batches)))
+        if len(batches) > 1 and workers > 1:
+            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="margos-context") as pool:
+                outcomes = list(pool.map(call_one, batches))
+        else:
+            outcomes = [call_one(request) for request in batches]
+        for raw, meta, latency, error in outcomes:
+            request_count += 1
+            stage_request_count[stage] += 1
+            stage_latency_ms[stage] += latency
+            provider_meta = dict(meta)
             network_value = provider_meta.get("network_request_count", 0)
             if (
                 isinstance(network_value, int)
@@ -717,31 +745,25 @@ def evaluate_context_reflex(
             ):
                 network_request_count += network_value
             _aggregate_usage(aggregate_usage, provider_meta)
-
-            if status in {"NOT_CONFIGURED", "ERROR"}:
+            if error is not None:
                 return False
-            if status != "AVAILABLE":
-                provider_meta = {
-                    **provider_meta,
-                    "status": "ERROR",
-                    "error": f"unsupported provider status: {status}",
-                }
-                return False
-            try:
-                validated = validate_context_reflex_result(raw, request)
-            except (TypeError, ValueError, KeyError) as exc:
-                provider_meta = {
-                    **provider_meta,
-                    "status": "ERROR",
-                    "error": f"{type(exc).__name__}: {exc}",
-                }
-                return False
-            all_answers.update(validated["answers"])
+            if isinstance(raw, Mapping):
+                all_answers.update(raw.get("answers", {}))
         return True
 
-    metadata_batches = _candidate_batches(state, candidates, None)
+    # A locally available bounded capsule is safe to include in the first
+    # request. This keeps the common path to one round trip while still
+    # preventing raw payload projection; the extractor performs secret
+    # screening before this function sees the capsule.
+    metadata_batches = _candidate_batches(state, candidates, payloads)
     metadata_ok = invoke(metadata_batches, "METADATA_ONLY")
     unresolved: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    capsule_status: dict[str, str] = {}
+    if payloads is not None:
+        for item, _decision in candidates:
+            capsule = _semantic_capsule(item, state, payloads)
+            if isinstance(capsule, Mapping):
+                capsule_status[item["item_id"]] = str(capsule.get("status", "UNKNOWN"))
     if metadata_ok:
         for item, decision in candidates:
             answer = all_answers.get(item["item_id"])
@@ -759,7 +781,13 @@ def evaluate_context_reflex(
             ]
             if any(abs(value - threshold) <= float(THRESHOLDS["abstain_band"])
                    for value, threshold in zip(values, thresholds)):
-                unresolved.append((item, decision))
+                # A bounded exact local capsule already supplied to Stage 1 is
+                # the evidence dependency; paying a serial Stage 2 request for
+                # it would add latency without creating new state. Suppressed
+                # capsules are privacy-terminal and must use conservative
+                # local behavior, never a remote retry.
+                if capsule_status.get(item["item_id"]) not in {"AVAILABLE", "SUPPRESSED_SECRET"}:
+                    unresolved.append((item, decision))
     if (
         metadata_ok
         and unresolved

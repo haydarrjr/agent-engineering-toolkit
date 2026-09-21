@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Payload Artifact v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_id", "content", "content_sha256", "size", "source", "fetch"],
+  "properties": {
+    "schema_version": {"const": "margos-payload-artifact/v1"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "content": {"type": "string"},
+    "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "size": {"type": "object", "required": ["chars", "bytes"], "properties": {"chars": {"type": "integer", "minimum": 0}, "bytes": {"type": "integer", "minimum": 0}, "tokens_estimated": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+    "source": {"type": "object"},
+    "fetch": {"type": "object", "required": ["status", "latency_ms"], "properties": {"status": {"type": "string"}, "latency_ms": {"type": "number", "minimum": 0}}, "additionalProperties": true}
+  },
+  "additionalProperties": true
+}

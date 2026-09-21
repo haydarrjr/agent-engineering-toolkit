@@ -17,7 +17,7 @@
       "required": ["decision", "reason", "detail", "policy_state_sha256"],
       "properties": {
         "decision": {"enum": ["CALL_REFLEX", "SKIP"]},
-        "reason": {"enum": ["CALL_REFLEX", "SKIP_POLICY_SUFFICIENT", "SKIP_NO_MATERIAL_ROUTE_DELTA", "SKIP_HOST_CANNOT_EXPLOIT_RESULT", "SKIP_BUDGET", "SKIP_DISABLED"]},
+        "reason": {"enum": ["CALL_REFLEX", "SKIP_POLICY_SUFFICIENT", "SKIP_NO_MATERIAL_ROUTE_DELTA", "SKIP_NO_AVOIDABLE_OPERATION", "SKIP_NO_MATERIAL_VALUE_DELTA", "SKIP_HOST_CANNOT_EXPLOIT_RESULT", "SKIP_CACHE_HIT", "SKIP_LATENCY_BUDGET", "SKIP_COST_BUDGET", "SKIP_UNCALIBRATED_VALUE_MODEL", "SKIP_BUDGET", "SKIP_DISABLED"]},
         "detail": {"type": "string"},
         "policy_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       },

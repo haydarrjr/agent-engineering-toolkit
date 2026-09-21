@@ -277,14 +277,14 @@ class ContextReflexTests(unittest.TestCase):
         )
         provider = jev.JevReflexProvider(api_key="test-key", transport=transport)
         ctx.materialize_context_view(raw_state, {"candidate": text}, provider)
-        self.assertEqual(len(seen["payloads"]), 2)
-        candidate = seen["payloads"][1]["state"]["candidates"][0]
+        self.assertEqual(len(seen["payloads"]), 1)
+        candidate = seen["payloads"][0]["state"]["candidates"][0]
         capsule = candidate["semantic_capsule"]
         self.assertLessEqual(capsule["characters"], 24)
         self.assertEqual(capsule["status"], "AVAILABLE")
         self.assertEqual(len(capsule["payload_sha256"]), 64)
         self.assertEqual(len(capsule["excerpt_sha256s"]), len(capsule["exact_excerpts"]))
-        for question in seen["payloads"][1]["questions"].values():
+        for question in seen["payloads"][0]["questions"].values():
             self.assertIn("candidates[0]", question["instructions"])
             self.assertNotIn("state.candidates", question["instructions"])
 

@@ -20,6 +20,9 @@ required = (
     ROOT / "tests/test_margos_context_evaluation.py",
     ROOT / "scripts/benchmark_margos_trace.py",
     ROOT / "scripts/benchmark_margos_jev_v3.py",
+    ROOT / "scripts/benchmark_margos_jev_v4.py",
+    ROOT / "docs/MARGOS_TYPESAFE_CONFORMANCE.md",
+    ROOT / "provenance/typesafe-jev-design.json",
     ROOT / "tests/fixtures/margos/trace-benchmark-v1.json",
     ROOT / "tests/test_margos_trace_benchmark.py",
     MARGOS / "schemas/trace-benchmark-v1.schema.json",
@@ -108,6 +111,47 @@ if benchmark_v3.is_file():
     for token in ("A_POLICY_ONLY", "B_POLICY_JEV_ROUTING", "C_POLICY_ROUTING_METADATA_CONTEXT", "D_POLICY_ROUTING_STAGED_EVIDENCE", "partition_isolation", "thresholds_frozen_before_holdout", "gold_labels_are_external_to_jev", "JEV_NOT_PROMOTED"):
         check(token in text, f"JEV v3 benchmark missing contract: {token}")
 
+benchmark_v4 = ROOT / "scripts/benchmark_margos_jev_v4.py"
+if benchmark_v4.is_file():
+    text = benchmark_v4.read_text(encoding="utf-8")
+    for token in (
+        "A_POLICY_ONLY_EXECUTABLE",
+        "B_POLICY_JEV_ROUTING_COLD",
+        "C_POLICY_JEV_PRERETRIEVAL_COLD",
+        "D_FULL_WARM_REPLAY",
+        "partition_isolation",
+        "thresholds_frozen_before_holdout",
+        "gold_labels_are_external_to_jev",
+        "DERIVED_COUNTERFACTUAL",
+        "warm_replay",
+        "JEV_NOT_PROMOTED",
+    ):
+        check(token in text, f"JEV v4 benchmark missing contract: {token}")
+
+provenance = ROOT / "provenance/typesafe-jev-design.json"
+if provenance.is_file():
+    try:
+        design = json.loads(provenance.read_text(encoding="utf-8"))
+        check(design.get("official_skill", {}).get("blob_sha") == "0109513f9656917dc93cbc5ecddfca465a53ce66", "TypeSafe skill provenance blob drift")
+        check(len(design.get("docs_pages_consulted", [])) >= 5, "TypeSafe design provenance must list targeted live docs")
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid TypeSafe design provenance: {exc}")
+
+for name in (
+    "execution-opportunity-v1.schema.json",
+    "value-of-call-receipt-v1.schema.json",
+    "jev-runtime-receipt-v1.schema.json",
+    "retrieval-candidate-v1.schema.json",
+    "context-retrieval-plan-v1.schema.json",
+    "payload-artifact-v1.schema.json",
+):
+    path = MARGOS / "schemas" / name
+    if path.is_file():
+        try:
+            json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"invalid Issue #21 JSON {name}: {exc}")
+
 for name in (
     "host-compaction-policy-v1.json",
     "host-compaction-request-v1.schema.json",
@@ -146,6 +190,8 @@ check("MARGOS evaluation/privacy contract" in ci, "CI must run Phase 4 evaluatio
 check("MARGOS frozen context benchmark (policy)" in ci, "CI must run deterministic policy context benchmark")
 check("MARGOS frozen context benchmark (fixture)" in ci, "CI must run fixture Context Reflex benchmark")
 check("MARGOS redacted trace benchmark" in ci, "CI must run privacy-safe redacted trace benchmark")
+check("MARGOS JEV v4 executable fixture benchmark" in ci, "CI must run deterministic executable v4 benchmark")
+check("benchmark_margos_jev_v4.py --mode fixture --strict" in ci, "CI must run the strict v4 fixture benchmark")
 check("--mode jev" not in ci, "CI must never run live Jev context benchmark")
 check("TYPESAFE_API_KEY" not in ci, "CI must not inject TypeSafe credentials")
 

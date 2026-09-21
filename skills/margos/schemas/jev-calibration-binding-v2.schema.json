@@ -9,7 +9,7 @@
     "model": {"type": "string", "minLength": 1},
     "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-    "projection_version": {"enum": ["margos-jev-routing-projection/v2", "margos-jev-context-projection/v3"]},
+    "projection_version": {"enum": ["margos-jev-routing-projection/v2", "margos-jev-context-projection/v3", "margos-jev-retrieval-projection/v1"]},
     "corpus_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "evaluation_status": {"const": "PASSED"},
     "calibration_partition_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

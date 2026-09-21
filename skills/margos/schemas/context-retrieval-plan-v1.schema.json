@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Retrieval Plan v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_ids", "mandatory_ids", "optional_ids", "selected_ids", "fallback_ids", "admission", "telemetry"],
+  "properties": {
+    "schema_version": {"const": "margos-context-retrieval-plan/v1"},
+    "candidate_ids": {"type": "array", "items": {"type": "string"}},
+    "mandatory_ids": {"type": "array", "items": {"type": "string"}},
+    "optional_ids": {"type": "array", "items": {"type": "string"}},
+    "selected_ids": {"type": "array", "items": {"type": "string"}},
+    "fallback_ids": {"type": "array", "items": {"type": "string"}},
+    "admission": {"type": "object"},
+    "telemetry": {"type": "object"}
+  },
+  "additionalProperties": true
+}
