@@ -14,4 +14,4 @@ Keep this repository a portable, skills-first Agent Plugins package.
 - Source validation does not prove installation, publication, host discovery, exact automatic model selection, or live behavior.
 - Safe source-local edits, tests, and repairs may proceed together; external, destructive, credentialed, publication, or production effects require their own authority.
 
-Before merging changes that alter routing, manifests, skills, client adapters, or distribution surfaces, run `python scripts/validate_repository.py`, `python scripts/validate_margos_host_adapters.py` when MARGOS is affected, and the relevant tests.
+Before merging changes that alter routing, manifests, skills, client adapters, or distribution surfaces, run `python scripts/validate_repository.py`, `python scripts/validate_margos_host_adapters.py` when MARGOS is affected, and the relevant tests. Issue #18 live JEV promotion is a separate hard gate: use only `TYPESAFE_API_KEY` from the environment, record `NOT_RUN` when unavailable, and do not merge on a missing live benchmark.

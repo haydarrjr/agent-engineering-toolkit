@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Route Receipt v2",
+  "type": "object",
+  "required": ["schema_version", "decision_authority", "state_sha256", "policy_version", "question_set_version", "question_set_sha256", "threshold_policy_version", "threshold_policy_sha256", "admission", "provider", "admissible", "blocked", "policy_rules_applied", "reflex", "selected", "host_execution"],
+  "properties": {
+    "schema_version": {"const": "margos-route-receipt/v2"},
+    "decision_authority": {"const": "PROPOSED"},
+    "state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_version": {"const": "margos-policy/v2"},
+    "question_set_version": {"const": "margos-questions/v2"},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_version": {"const": "margos-thresholds/v2"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "admission": {
+      "type": "object",
+      "required": ["decision", "reason", "detail", "policy_state_sha256"],
+      "properties": {
+        "decision": {"enum": ["CALL_REFLEX", "SKIP"]},
+        "reason": {"enum": ["CALL_REFLEX", "SKIP_POLICY_SUFFICIENT", "SKIP_NO_MATERIAL_ROUTE_DELTA", "SKIP_HOST_CANNOT_EXPLOIT_RESULT", "SKIP_BUDGET", "SKIP_DISABLED"]},
+        "detail": {"type": "string"},
+        "policy_state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      },
+      "additionalProperties": false
+    },
+    "provider": {"type": "object"},
+    "admissible": {"type": "object"},
+    "blocked": {"type": "array"},
+    "policy_rules_applied": {"type": "array"},
+    "reflex": {"type": "object"},
+    "selected": {"type": "object"},
+    "host_execution": {"type": "object", "required": ["status"]}
+  },
+  "additionalProperties": true
+}

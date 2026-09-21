@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Routing State v2",
+  "type": "object",
+  "required": ["schema_version", "task", "host", "authority", "work_shape", "evidence", "budget"],
+  "properties": {
+    "schema_version": {"const": "margos-routing-state/v2"},
+    "task": {"type": "object", "required": ["mutation_kind", "trivial"]},
+    "host": {"type": "object", "required": ["subagents_proven", "available_compute_classes"]},
+    "authority": {"type": "object"},
+    "work_shape": {"type": "object", "required": ["route_equivalent"]},
+    "evidence": {"type": "object"},
+    "budget": {"type": "object"}
+  },
+  "additionalProperties": false
+}

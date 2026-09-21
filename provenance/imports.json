@@ -1,6 +1,6 @@
 {
   "schema": "aet.provenance.imports.v1",
-  "generated_for_release": "1.2.0",
+  "generated_for_release": "1.3.0",
   "imports": [
     {
       "source": "haydarrjr/engineering-agent-toolkit",

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Context Receipt v2",
+  "type": "object",
+  "required": ["schema_version", "authority", "state_sha256", "policy_version", "question_set_version", "question_set_sha256", "threshold_policy_version", "threshold_policy_sha256", "provider", "input", "actions", "output", "context_view_sha256", "canonical_source_mutated", "rehydration_available"],
+  "properties": {
+    "schema_version": {"const": "margos-context-receipt/v2"},
+    "authority": {"const": "DERIVED_VIEW"},
+    "state_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "policy_version": {"const": "margos-context-policy/v2"},
+    "question_set_version": {"const": "margos-context-questions/v2"},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_version": {"const": "margos-context-thresholds/v2"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider": {
+      "type": "object",
+      "required": ["kind", "status"],
+      "properties": {
+        "kind": {"type": "string"},
+        "status": {"enum": ["DISABLED", "NOT_NEEDED", "AVAILABLE", "NOT_CONFIGURED", "ERROR"]},
+        "calibration_status": {"type": "string"},
+        "request_count": {"type": "integer", "minimum": 0},
+        "network_request_count": {"type": "integer", "minimum": 0},
+        "items_evaluated": {"type": "integer", "minimum": 0},
+        "batch_count": {"type": "integer", "minimum": 0},
+        "stage_request_count": {"type": "object"},
+        "stage_latency_ms": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "input": {"type": "object"},
+    "actions": {"type": "array"},
+    "output": {"type": "object"},
+    "context_view_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "canonical_source_mutated": {"const": false},
+    "rehydration_available": {"type": "boolean"}
+  },
+  "additionalProperties": true
+}

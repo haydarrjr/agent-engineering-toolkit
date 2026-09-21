@@ -2,6 +2,15 @@
 
 All notable project changes are documented here.
 
+## [1.3.0] - 2026-09-21
+
+### MARGOS JEV v3
+- Hardened routing with independent ambiguity, verification-risk, and direct-escalation thresholds plus deterministic Reflex Admission receipts.
+- Added versioned Context Reflex contracts, staged metadata/evidence evaluation, exact evidence capsules, runtime fingerprints, and forced A/B/C/D benchmark tooling.
+- Added the Issue #18 ReThinking and Agent Plugins surface audit with 20 classifications: 16 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, and 1 `UNVERIFIED`.
+- Authorized live A/B/C/D evaluation passed with requested `jev-latest`, observed `jev-1.13.0`, zero provider errors after bounded retries, and `JEV_PROMOTED_FOR_FROZEN_SUITE`.
+- Added malformed-output contract validation and bounded retry telemetry at the TypeSafe adapter boundary.
+
 ## [Unreleased]
 
 ## [1.2.0] - 2026-09-19

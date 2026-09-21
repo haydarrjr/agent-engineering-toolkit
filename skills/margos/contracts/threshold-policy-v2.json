@@ -1,0 +1,10 @@
+{
+  "version": "margos-thresholds/v2",
+  "selection": "CALIBRATION_SET_ONLY",
+  "choice_min_margin": 0.15,
+  "ambiguity_escalation": 0.55,
+  "verification_escalation": 0.55,
+  "direct_escalation": 0.75,
+  "independent_critic": 0.75,
+  "transfer_sufficient": 0.60
+}

@@ -255,12 +255,18 @@ class ContextReflexTests(unittest.TestCase):
         self.assertEqual(receipt["provider"]["network_request_count"], 0)
 
     def test_semantic_capsule_is_bounded_and_uses_explicit_state_path(self):
-        seen = {}
+        seen = {"payloads": []}
         text = "parser failure: expected token near closing bracket"
 
         def transport(base, key, payload, timeout):
-            seen["payload"] = payload
-            return fake_jev_response(payload)
+            del base, key, timeout
+            seen["payloads"].append(payload)
+            if any("semantic_capsule" in candidate for candidate in payload["state"]["candidates"]):
+                return fake_jev_response(payload)
+            result = {}
+            for qid in payload["questions"]:
+                result[qid] = {"type": "noul", "noul": 0.72 if qid.endswith("_keep_full") else 0.10}
+            return {"model": "jev-early-access", "answers": result}
 
         raw_state = state([item("candidate", text, locator="src/parser.py")])
         raw_state["view"].update(
@@ -271,11 +277,14 @@ class ContextReflexTests(unittest.TestCase):
         )
         provider = jev.JevReflexProvider(api_key="test-key", transport=transport)
         ctx.materialize_context_view(raw_state, {"candidate": text}, provider)
-        candidate = seen["payload"]["state"]["candidates"][0]
-        self.assertEqual(candidate["semantic_capsule"]["text"], text[:24])
-        self.assertEqual(candidate["semantic_capsule"]["characters"], 24)
-        self.assertEqual(len(candidate["semantic_capsule"]["sha256"]), 64)
-        for question in seen["payload"]["questions"].values():
+        self.assertEqual(len(seen["payloads"]), 2)
+        candidate = seen["payloads"][1]["state"]["candidates"][0]
+        capsule = candidate["semantic_capsule"]
+        self.assertLessEqual(capsule["characters"], 24)
+        self.assertEqual(capsule["status"], "AVAILABLE")
+        self.assertEqual(len(capsule["payload_sha256"]), 64)
+        self.assertEqual(len(capsule["excerpt_sha256s"]), len(capsule["exact_excerpts"]))
+        for question in seen["payloads"][1]["questions"].values():
             self.assertIn("state.candidates[0]", question["instructions"])
 
     def test_semantic_capsule_suppresses_secret_like_prefix(self):

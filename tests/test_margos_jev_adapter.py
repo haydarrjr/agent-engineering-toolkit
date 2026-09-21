@@ -1,4 +1,5 @@
 import json, sys, unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -49,6 +50,28 @@ def fake_response(payload):
     return {'model':'jev-1.13.0','answers':answers,'usage':{'input_tokens':321,'output_tokens':42}}
 
 class JevAdapterTests(unittest.TestCase):
+    def test_model_list_accepts_typesafe_name_shape(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    'models': [
+                        {'name': 'jev-latest', 'description': 'latest'},
+                        {'name': 'jev-preview', 'description': 'preview'},
+                    ]
+                }).encode()
+
+        with patch.object(jev.urllib.request, 'urlopen', return_value=Response()):
+            self.assertEqual(
+                jev.resolve_available_models(api_key='test-key'),
+                ['jev-latest', 'jev-preview'],
+            )
+
     def test_projection_minimizes_host_and_constraint_identity(self):
         pre=core.policy_pre_evaluate(state())
         projected=jev.project_reflex_state(core.build_reflex_request(pre))
@@ -106,6 +129,19 @@ class JevAdapterTests(unittest.TestCase):
         self.assertEqual(result['provider']['projection_version'],jev.ROUTING_PROJECTION_VERSION)
         self.assertIn('calibration_binding_sha256',result['provider'])
 
+    def test_alias_response_can_bind_to_versioned_pinned_model(self):
+        pre=core.policy_pre_evaluate(state())
+        binding=calibration_binding('jev-1.13.0')
+        provider=jev.JevReflexProvider(
+            api_key='test-key',
+            model='jev-latest',
+            calibration_binding=binding,
+            transport=lambda b,k,p,t: {**fake_response(p), 'model':'jev-1.13.0'},
+        )
+        result=provider.evaluate(core.build_reflex_request(pre),core.QUESTION_SET)
+        self.assertEqual(result['provider']['calibration_status'],'CALIBRATED_FOR_FROZEN_SUITE')
+        self.assertEqual(result['provider']['response_model'],'jev-1.13.0')
+
     def test_alias_or_changed_binding_is_stale(self):
         pre=core.policy_pre_evaluate(state())
         binding=calibration_binding('jev-latest')
@@ -136,6 +172,30 @@ class JevAdapterTests(unittest.TestCase):
         self.assertEqual(receipt['provider']['kind'],'typesafe-jev')
         self.assertEqual(receipt['provider']['status'],'ERROR')
         self.assertEqual(receipt['selected']['coordination'],'DIRECT')
+
+    def test_malformed_distribution_is_retried_and_telemetried(self):
+        calls = 0
+        def transport(base, key, payload, timeout):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                response = fake_response(payload)
+                response['answers']['verification_risk']['probabilities']['0'] = 0.99
+                return response
+            return fake_response(payload)
+
+        pre = core.policy_pre_evaluate(state())
+        provider = jev.JevReflexProvider(
+            api_key='test-key',
+            max_attempts=2,
+            transport=transport,
+        )
+        result = provider.evaluate(core.build_reflex_request(pre), core.QUESTION_SET)
+        self.assertEqual(calls, 2)
+        self.assertEqual(result['provider']['status'], 'AVAILABLE')
+        self.assertEqual(result['provider']['network_request_count'], 2)
+        self.assertEqual(result['provider']['retry_count'], 1)
+        self.assertIn('invalid distribution for verification_risk', result['provider']['retry_errors'][0])
 
     def test_reflex_assisted_decision_preserves_user_constraint(self):
         provider=jev.JevReflexProvider(api_key='test-key',transport=lambda b,k,p,t: fake_response(p))

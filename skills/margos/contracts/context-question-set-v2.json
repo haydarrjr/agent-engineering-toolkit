@@ -1,0 +1,29 @@
+{
+  "version": "margos-context-questions/v2",
+  "questions": [
+    {
+      "id": "keep_awareness",
+      "kind": "noul",
+      "instructions": "Does `state.candidates[current].source`, `state.candidates[current].evidence`, or `state.candidates[current].replay` materially affect the next obligation in `state.task` even when the exact payload is omitted?",
+      "criterion": "Answer true only when awareness can change the next reasoning or verification step.",
+      "true": "Awareness of the item can materially change the next reasoning or verification step.",
+      "false": "The next obligation can proceed safely without awareness of the item."
+    },
+    {
+      "id": "keep_full",
+      "kind": "noul",
+      "instructions": "Does `state.task.verification_obligation` require the exact full `state.candidates[current]` payload rather than a structured reference, exact capsule, or safe replay?",
+      "criterion": "Answer true only when the exact payload is materially needed now.",
+      "true": "The exact full payload is materially needed now.",
+      "false": "A structured reference, bounded exact excerpt, or later rehydration is sufficient."
+    },
+    {
+      "id": "replay_needed",
+      "kind": "noul",
+      "instructions": "If `state.candidates[current]` is omitted now, is rehydration likely to be required before `state.task.verification_obligation` can close?",
+      "criterion": "Answer true only when the item will probably need recovery before closure.",
+      "true": "The item will probably need to be recovered before closure.",
+      "false": "The obligation is likely to close without recovering the payload."
+    }
+  ]
+}

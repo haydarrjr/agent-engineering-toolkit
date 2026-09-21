@@ -141,3 +141,19 @@ Issue #16 completes the next production-shaped Reflex layer without changing aut
 Context Reflex can optionally add a privacy-bounded semantic capsule derived from a locally verified exact payload. Remote semantic content is opt-in, length-capped, secret-filtered, and never becomes canonical state. Jev questions reference concrete state paths such as `state.candidates[N]` to reduce indirection.
 
 Calibration is version-aware: research may follow `jev-latest`, while calibrated operation requires a pinned model and an explicit binding to the question set, threshold policy, projection version, and frozen corpus. Drift becomes `STALE`. A separate redacted trace harness lets maintainers evaluate representative Codex routing/context traces locally without committing private transcripts.
+
+## Issue #18: JEV v3 hardening
+
+JEV v3 keeps the authority chain explicit:
+
+```text
+Policy -> Reflex Admission -> one batched typed Reflex request
+       -> independent threshold signals / deterministic composition
+       -> final Policy veto -> host-native execution -> verification
+```
+
+Routing no longer compares unrelated ambiguity, verification-risk, and direct-escalation signals against one shared maximum. Each signal has its own calibration-frozen threshold and the frontier decision is their explicit OR. Admission receipts record whether Reflex was called and a deterministic reason for every skip, including Policy sufficiency, no material route delta, unavailable host exploitation, budget, and disabled provider.
+
+Context Reflex is staged. Protected-context Policy runs locally first; an admitted metadata-only request can be followed by a bounded exact evidence request only when metadata is unresolved and the host explicitly permits remote capsules. Capsules carry exact excerpts, extractor/version, payload and excerpt hashes, provenance, and hard budgets. Secret screening suppresses the whole capsule before remote projection, and provider or confidence failures use the conservative local action.
+
+The forced-arm benchmark (`scripts/benchmark_margos_jev_v3.py`) assigns A/B/C/D outside the system under test, separates synthetic/redacted-real/derived-counterfactual provenance, freezes calibration before holdout evaluation, records raw downstream verification outcomes, and binds results to a runtime/source fingerprint. The benchmark is offline in CI; live promotion is a separate hard pre-merge gate. The current authorized run observed `jev-1.13.0` from the `jev-latest` alias and returned `JEV_PROMOTED_FOR_FROZEN_SUITE`. This enables optional typed Reflex use inside MARGOS; it does not bypass Policy, host capability checks, deterministic composition, final veto, or verification, and it must be re-evaluated when the frozen contracts or effective model change.

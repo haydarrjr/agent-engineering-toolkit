@@ -67,6 +67,6 @@ The portable AET implementation is approved for experimental Context Reflex rese
 
 ## JEV v2 semantic capsule boundary
 
-Remote semantic capsules are disabled unless the Context View explicitly enables them. When enabled, MARGOS locally verifies the exact payload hash, takes only a bounded exact prefix (maximum 512 characters in the current policy), hashes the derived capsule, and suppresses the capsule if the prefix matches committed secret patterns. The provider projection still replaces canonical local item IDs with batch-local keys and never receives the full payload by default.
+Remote semantic capsules are disabled unless the Context View explicitly enables them. When enabled, MARGOS locally verifies the exact payload hash, extracts only bounded exact excerpts using the versioned evidence extractor (maximum 512 characters), records excerpt and provenance hashes, and screens the complete canonical payload before projection. Any secret-pattern match suppresses the capsule and labels the result `SUPPRESSED_SECRET`; no fabricated summary is sent. The provider projection still replaces canonical local item IDs with batch-local keys and never receives the full payload by default. A no-match selection is explicitly labeled `EXACT_PREFIX_FALLBACK`.
 
 Redacted trace evaluation is local/offline in CI. The committed trace fixture is synthetic, requires `redacted=true`, and is secret-scanned. Real Codex traces are operator-supplied local inputs and are not repository artifacts.
