@@ -28,19 +28,19 @@ Authoritative guidance read for this audit:
 | `.github/plugin/marketplace.json` | KEEP | Copilot marketplace remains client-specific, strict, and version-aligned with `plugin.json`. |
 | `com.github.copilot/agents/*` | KEEP | Hidden `model: auto` leaf agents preserve host-owned execution and do not recursively invoke agents. |
 | `scripts/validate_*.py` | KEEP | Validators encode repository, host adapter, Context, handoff, evaluation/privacy, and reproducible-release boundaries; they do not claim installation or live behavior. |
-| `scripts/benchmark_*.py` | NARROW | Offline fixture benchmarks remain CI gates. Live JEV is isolated to the explicit Issue #18 driver and reports `NOT_RUN` without a key. |
+| `scripts/benchmark_*.py` | NARROW | Offline fixture benchmarks remain CI gates. Live JEV is isolated to the explicit Issue #18 driver; missing credentials still produce `NOT_RUN`, while the authorized run is recorded as separate evidence. |
 | `scripts/benchmark_margos_jev_v3.py` | KEEP | Owns forced A/B/C/D arm selection, provenance, partition isolation, raw outcome metrics, runtime fingerprinting, and promotion status. |
 | `tests/*` and `tests/fixtures/*` | KEEP | Regression fixtures are synthetic/redacted and are not treated as live-model ground truth. |
 | release/provenance/privacy docs | KEEP | Required repository-specific release, lineage, privacy, and evidence boundaries cannot be inferred safely and remain explicit. |
 | untracked `.aet/*` baseline | RELOCATE | Local baseline evidence is retained outside the package and excluded from commits; it is not portable plugin content. |
 | duplicated legacy v1 contracts/schemas | NARROW | Kept as compatibility/history surfaces; new runtime authority is v2 and validators bind v2. |
-| live provider output, credentials, host installation/readback | UNVERIFIED | No `TYPESAFE_API_KEY`, external host execution, marketplace installation, or live promotion evidence is available in this environment. |
+| credentials, external host execution, marketplace installation/readback | UNVERIFIED | The credential was read only from the process environment and was not committed or published. External host execution, marketplace installation, and host readback remain outside this portable repository audit. |
 
 ## Counts and gates
 
-The repository heuristic audit completed with `PASS` and no findings. Manual classification above covers the requested instruction, MARGOS, manifest, adapter, validator, benchmark, test, provenance, and release surfaces. The portable plugin contract remains authoritative; Codex and Copilot catalogs are reconciled adapters.
+The repository heuristic audit completed with `PASS` and no findings. The 20 manual classifications are: 16 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, 0 `REMOVE`, and 1 `UNVERIFIED`. The classification covers the requested instruction, MARGOS, manifest, adapter, validator, benchmark, test, provenance, and release surfaces. The portable plugin contract remains authoritative; Codex and Copilot catalogs are reconciled adapters.
 
-Local gates completed before implementation included the repository/host/context/handoff/evaluation validators, 84 repository tests, frozen routing/context/trace benchmarks, Agent Plugin and skill validators, both marketplace render checks, surface reconciliation, and reproducible packaging. The Issue #18 forced-arm fixture driver is also deterministic and emits a runtime fingerprint; its live mode is a hard pre-merge gate and currently reports `NOT_RUN` because the environment has no `TYPESAFE_API_KEY`.
+Local gates completed after implementation included the repository/host/context/handoff/evaluation validators, 94 repository tests, frozen routing/context/trace benchmarks, Agent Plugin and skill validators, both marketplace render checks, surface reconciliation, and reproducible packaging. The Issue #18 forced-arm fixture driver is deterministic and emits a runtime fingerprint. The authorized live run on source `b78c26a` used `jev-latest`, observed `jev-1.13.0`, had zero provider errors after bounded malformed-output retries, and produced `JEV_PROMOTED_FOR_FROZEN_SUITE`; the raw local report remains under ignored `.aet/` evidence and its summary is recorded in the Issue #18 GitHub thread.
 
 ## ReThinking outcome
 
