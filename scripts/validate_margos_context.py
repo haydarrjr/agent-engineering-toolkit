@@ -57,7 +57,7 @@ check(
     'Context Reflex v2 question IDs/order drift',
 )
 check(all(isinstance(x,dict) and x.get('kind')=='noul' for x in qitems),'Context Reflex v2 must use atomic Noul questions')
-check(all(isinstance(x,dict) and '`state.' in x.get('instructions','') for x in qitems),'Context Reflex questions must use explicit structured paths')
+check(all(isinstance(x,dict) and '`' in x.get('instructions','') and '`state.' not in x.get('instructions','') for x in qitems),'Context Reflex questions must use state-relative structured paths')
 
 thresholds=contracts.get('context-threshold-policy-v2.json',{})
 check(thresholds.get('version')=='margos-context-thresholds/v2','context threshold version drift')
@@ -122,8 +122,9 @@ adapter=MARGOS/'scripts/margos_reflex_jev.py'
 check(adapter.is_file(),'missing shared Jev Reflex adapter')
 if adapter.is_file():
     text=adapter.read_text(encoding='utf-8')
-    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','state.candidates[','extractor_version','CONTEXT_PROJECTION_VERSION'):
+    for token in ('TYPESAFE_API_KEY','CONTEXT_REQUEST_VERSION','project_context_reflex_state','network_request_count','semantic_capsule','candidates[','extractor_version','CONTEXT_PROJECTION_VERSION'):
         check(token in text,f'Jev adapter missing Context Reflex boundary: {token}')
+    check('state.candidates[' not in text,'Jev adapter must not emit state-prefixed context paths')
     check('SECOND_TYPESAFE' not in text,'Context Reflex must not create a second credential path')
     check(text.count('os.environ.get("TYPESAFE_API_KEY"')==1,'Jev adapter must use one runtime TYPESAFE_API_KEY lookup')
 

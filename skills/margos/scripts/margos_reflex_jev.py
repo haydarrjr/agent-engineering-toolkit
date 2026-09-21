@@ -336,17 +336,20 @@ def _build_context_payload(
     state, mapping = project_context_reflex_state(request)
     payload_questions = {}
     for index, (candidate_key, _) in enumerate(mapping):
-        candidate_path = f"state.candidates[{index}]"
+        # TypeSafe structured paths are resolved relative to the request's
+        # top-level `state` object.  The path must therefore start at
+        # `candidates`, not at `state.candidates`.
+        candidate_path = f"candidates[{index}]"
         for question in questions:
             if question.get("kind") != "noul":
                 raise JevAdapterError("Context Reflex supports atomic Noul questions only")
             qid = question["id"]
             instructions = str(question.get("instructions", question["criterion"]))
-            instructions = instructions.replace("state.candidates[current]", candidate_path)
+            instructions = instructions.replace("candidates[current]", candidate_path)
             payload_questions[f"{candidate_key}_{qid}"] = {
                 "type": "noul",
                 "instructions": (
-                    f"Evaluate {candidate_path} against `state.task`. "
+                    f"Evaluate {candidate_path} against `task`. "
                     f"{instructions}"
                 ),
                 "criteria": {

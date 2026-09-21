@@ -31,7 +31,7 @@ for name in ('question-set-v2.json','threshold-policy-v2.json'):
 
 question_doc = json.loads((MARGOS/'contracts/question-set-v2.json').read_text(encoding='utf-8'))
 for question in question_doc.get('questions', []):
-    check(isinstance(question.get('instructions'), str) and '`state.' in question['instructions'], f"question lacks a self-contained structured path: {question.get('id')}")
+    check(isinstance(question.get('instructions'), str) and '`' in question['instructions'] and '`state.' not in question['instructions'], f"question lacks a state-relative structured path: {question.get('id')}")
     if question.get('kind') == 'choice':
         check(set(question.get('criteria', {})) == set(question.get('choices', [])), f"Choice criteria are not exhaustive: {question.get('id')}")
     elif question.get('kind') == 'score':
@@ -64,8 +64,9 @@ if adapter.is_file():
     check('TYPESAFE_API_KEY' in text,'Jev adapter must read runtime key from environment')
     check('urllib.request' in text,'Jev adapter must remain stdlib-only')
     check('import requests' not in text and 'import httpx' not in text,'Jev adapter must not add third-party HTTP dependencies')
-    for token in ('ROUTING_PROJECTION_VERSION','CONTEXT_PROJECTION_VERSION','CALIBRATION_BINDING_VERSION','state.candidates['):
+    for token in ('ROUTING_PROJECTION_VERSION','CONTEXT_PROJECTION_VERSION','CALIBRATION_BINDING_VERSION','candidates['):
         check(token in text,f'Jev adapter missing v2 contract: {token}')
+    check('state.candidates[' not in text, 'Jev adapter must not emit state-prefixed structured paths')
 check((ROOT/'scripts/benchmark_margos_routing.py').is_file(),'missing MARGOS routing benchmark')
 check((ROOT/'docs/MARGOS_RESEARCH.md').is_file(),'missing MARGOS research record')
 check((ROOT/'docs/MARGOS_EVALUATION.md').is_file(),'missing MARGOS evaluation record')
