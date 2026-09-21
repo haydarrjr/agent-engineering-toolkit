@@ -238,6 +238,17 @@ def summarize(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def promotion_status(*, live: bool, model: str | None, safe: bool, non_inferior: bool) -> str:
+    """Apply the predeclared promotion gates without treating aliases as pinned."""
+    if not live:
+        return "JEV_NOT_PROMOTED"
+    if not safe or not non_inferior:
+        return "JEV_NOT_PROMOTED"
+    if model != jev.PINNED_MODEL:
+        return "JEV_RESEARCH_ONLY"
+    return "JEV_PROMOTED_FOR_FROZEN_SUITE"
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     routing_doc = json.loads(args.routing_dataset.read_text(encoding="utf-8"))
     context_doc = json.loads(args.context_dataset.read_text(encoding="utf-8"))
@@ -283,6 +294,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "live_status": "READY" if args.mode == "live" else "NOT_RUN",
         "requested_model": args.model,
         "response_model": model if args.mode == "live" else None,
+        "available_models": available if args.mode == "live" else [],
+        "pinned_model": jev.PINNED_MODEL,
+        "pinned_model_available": jev.PINNED_MODEL in available if args.mode == "live" else False,
         "provenance_counts": {
             "routing": {value: sum(provenance_for(case) == value for case in routing_cases) for value in PROVENANCE},
             "context": {value: sum(provenance_for(case) == value for case in context_cases) for value in PROVENANCE},
@@ -330,7 +344,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         and report["arms"][arm]["context"]["verified_success_rate"] >= baseline["context"]["verified_success_rate"]
         for arm in ARMS[1:]
     )
-    report["promotion_status"] = "JEV_PROMOTED_FOR_FROZEN_SUITE" if live and safe and non_inferior else ("JEV_RESEARCH_ONLY" if live else "JEV_NOT_PROMOTED")
+    report["promotion_status"] = promotion_status(
+        live=live,
+        model=model if live else None,
+        safe=safe,
+        non_inferior=non_inferior,
+    )
+    report["promotion_gates"] = {
+        "safe": safe,
+        "non_inferior": non_inferior,
+        "pinned_model_required": True,
+        "pinned_model_used": model == jev.PINNED_MODEL if live else False,
+    }
     report["runtime_fingerprint"] = fingerprint.build_fingerprint(
         requested_model=args.model,
         response_model=model if live else None,

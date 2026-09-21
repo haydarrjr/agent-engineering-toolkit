@@ -145,6 +145,26 @@ class JevV3ContractTests(unittest.TestCase):
         changed["source_sha"] = "different"
         self.assertIn("source_sha", fingerprint.fingerprint_mismatches(report["runtime_fingerprint"], changed))
 
+    def test_promotion_requires_pinned_model_and_live_gates(self):
+        self.assertEqual(
+            benchmark.promotion_status(
+                live=True, model="jev-1.13.0", safe=True, non_inferior=True
+            ),
+            "JEV_PROMOTED_FOR_FROZEN_SUITE",
+        )
+        self.assertEqual(
+            benchmark.promotion_status(
+                live=True, model="jev-latest", safe=True, non_inferior=True
+            ),
+            "JEV_RESEARCH_ONLY",
+        )
+        self.assertEqual(
+            benchmark.promotion_status(
+                live=True, model="jev-1.13.0", safe=False, non_inferior=True
+            ),
+            "JEV_NOT_PROMOTED",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
