@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Verification Candidate v1",
+  "type": "object",
+  "required": [
+    "schema_version", "candidate_id", "claim_fingerprint", "claim_summary",
+    "evidence_state", "evidence_kind", "policy_priority_rank",
+    "mandatory_by_policy", "remote_semantic_allowed", "verifier",
+    "discovery_provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "margos-verification-candidate/v1"},
+    "candidate_id": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+    "claim_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "claim_summary": {"type": "string", "minLength": 1, "maxLength": 600},
+    "evidence_state": {"enum": ["UNVERIFIED", "INCONCLUSIVE"]},
+    "evidence_kind": {
+      "enum": ["HYPOTHESIS", "SOURCE_SYMBOL", "DIFF", "TRACEBACK", "FAILING_ASSERTION", "LOG_TAIL", "SEARCH_SNIPPET", "DOCUMENT_EXCERPT", "STRUCTURED_FIELD"]
+    },
+    "policy_priority_rank": {"type": "integer", "minimum": 0},
+    "mandatory_by_policy": {"type": "boolean"},
+    "remote_semantic_allowed": {"type": "boolean"},
+    "verifier": {
+      "type": "object",
+      "required": ["operation_id", "kind", "host_capability_proof", "parallel_group", "cost"],
+      "properties": {
+        "operation_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128},
+        "host_capability_proof": {"type": "string", "minLength": 1, "maxLength": 512},
+        "parallel_group": {"type": "string", "minLength": 1, "maxLength": 64},
+        "cost": {
+          "type": "object",
+          "required": ["latency_ms_p50", "latency_ms_p95", "verification_cost_units"],
+          "properties": {
+            "latency_ms_p50": {"type": "number", "minimum": 0},
+            "latency_ms_p95": {"type": "number", "minimum": 0},
+            "model_tokens": {"type": "number", "minimum": 0},
+            "money_microunits": {"type": "number", "minimum": 0},
+            "verification_cost_units": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "discovery_provenance": {
+      "type": "object",
+      "required": ["provenance_kind", "source_sha256", "extractor_version"],
+      "properties": {
+        "provenance_kind": {"type": "string", "minLength": 1},
+        "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "extractor_version": {"type": "string", "minLength": 1},
+        "locator": {"type": "string", "maxLength": 512}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Verification Reflex Result v1",
+  "type": "object",
+  "required": ["schema_version", "question_set_sha256", "provider", "answers"],
+  "properties": {
+    "schema_version": {"const": "margos-verification-reflex-result/v1"},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "provider": {"type": "object"},
+    "answers": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "object", "required": ["probability"], "properties": {"probability": {"type": "number", "minimum": 0, "maximum": 1}}, "additionalProperties": true}}
+  },
+  "additionalProperties": false
+}

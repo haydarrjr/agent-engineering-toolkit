@@ -1,0 +1,20 @@
+{
+  "version": "margos-verification-questions/v1",
+  "primitive": "Noul",
+  "selection": "one comparable question per unresolved optional candidate in one batched same-state request",
+  "question_template": {
+    "type": "noul",
+    "instructions": "Given `task_objective` and the other unresolved candidates in `candidates`, should `candidates[INDEX]` consume one slot in the next bounded verification batch because verifying it now is likely to produce new evidence that materially changes the actionable audit result, rather than safely deferring it?",
+    "criteria": {
+      "true": "Yes only when this candidate is an unresolved claim, its bounded verifier is admissible, and running it now is likely to change the actionable result within the declared budget.",
+      "false": "No when the candidate can safely be deferred, is redundant with a higher-priority candidate, lacks an exploitable verifier path, or is unlikely to change the actionable result now."
+    }
+  },
+  "constraints": [
+    "Question IDs are code-local and cannot carry semantic meaning.",
+    "Every question references its exact backticked candidates[INDEX] path.",
+    "Every question uses the same state and the same proposition/criteria.",
+    "Noul is P(verify this candidate in the next batch), never truth, severity, confidence, or final finding rank.",
+    "The request contains no generic routing Choice, Score, or route sufficiency question."
+  ]
+}

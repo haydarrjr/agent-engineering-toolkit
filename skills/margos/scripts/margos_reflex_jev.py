@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
 import margos_decide as core
+import margos_verification as verification
 
 DEFAULT_BASE_URL = "https://api.typesafe.ai"
 DEFAULT_MODEL = "jev-latest"
@@ -29,8 +30,11 @@ CONTEXT_REQUEST_VERSION = "margos-context-reflex-request/v2"
 CONTEXT_RESULT_VERSION = "margos-context-reflex-result/v2"
 RETRIEVAL_REQUEST_VERSION = "margos-retrieval-reflex-request/v1"
 RETRIEVAL_RESULT_VERSION = "margos-retrieval-reflex-result/v1"
+VERIFICATION_REQUEST_VERSION = verification.REQUEST_VERSION
+VERIFICATION_RESULT_VERSION = verification.RESULT_VERSION
 ROUTING_PROJECTION_VERSION = "margos-jev-routing-projection/v2"
 CONTEXT_PROJECTION_VERSION = "margos-jev-context-projection/v3"
+VERIFICATION_PROJECTION_VERSION = verification.PROJECTION_VERSION
 CALIBRATION_BINDING_VERSION = "margos-jev-calibration/v2"
 Transport = Callable[[str, str, Mapping[str, Any], float], Mapping[str, Any]]
 RUNTIME_RECEIPT_VERSION = "margos-jev-runtime-receipt/v1"
@@ -157,6 +161,8 @@ def _hash_json(value: Any) -> str:
 
 
 def _projection_version(request: Mapping[str, Any]) -> str:
+    if request.get("schema_version") == VERIFICATION_REQUEST_VERSION:
+        return VERIFICATION_PROJECTION_VERSION
     if request.get("schema_version") == CONTEXT_REQUEST_VERSION:
         return CONTEXT_PROJECTION_VERSION
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
@@ -214,6 +220,11 @@ def _calibration_metadata(
 
 
 def _question_hash_for_request(request: Mapping[str, Any]) -> str:
+    if request.get("schema_version") == VERIFICATION_REQUEST_VERSION:
+        value = request.get("question_set_sha256")
+        if not isinstance(value, str):
+            raise JevAdapterError("Verification Reflex request missing question-set hash")
+        return value
     if request.get("schema_version") in {CONTEXT_REQUEST_VERSION, RETRIEVAL_REQUEST_VERSION}:
         value = request.get("question_set_sha256")
         if not isinstance(value, str):
@@ -223,6 +234,8 @@ def _question_hash_for_request(request: Mapping[str, Any]) -> str:
 
 
 def _result_version_for_request(request: Mapping[str, Any]) -> str:
+    if request.get("schema_version") == VERIFICATION_REQUEST_VERSION:
+        return VERIFICATION_RESULT_VERSION
     if request.get("schema_version") == CONTEXT_REQUEST_VERSION:
         return CONTEXT_RESULT_VERSION
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
@@ -549,6 +562,53 @@ def _build_retrieval_payload(
     return {"model": model, "state": state, "questions": payload_questions}
 
 
+def _build_verification_payload(
+    request: Mapping[str, Any],
+    questions: tuple[dict[str, Any], ...],
+    model: str,
+) -> dict[str, Any]:
+    """Build the dedicated one-batched-request Verification Reflex payload."""
+    if request.get("schema_version") != VERIFICATION_REQUEST_VERSION:
+        raise JevAdapterError("unsupported Verification Reflex request schema")
+    candidates = request.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        raise JevAdapterError("Verification Reflex requires optional candidates")
+    if len(questions) != len(candidates):
+        raise JevAdapterError("Verification Reflex requires one question per optional candidate")
+    state = {
+        "task_objective": _clip(request.get("task_objective"), 2000),
+        "candidates": [],
+    }
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            raise JevAdapterError("invalid Verification candidate projection")
+        summary = _clip(candidate.get("claim_summary"), 600)
+        if any(marker in summary for marker in ("Bearer ", "PRIVATE KEY", "TYPESAFE_API_KEY", "gh" + "p_")):
+            raise JevAdapterError("Verification claim summary failed privacy screening")
+        state["candidates"].append({
+            "candidate_id": _clip(candidate.get("candidate_id"), 128),
+            "claim_summary": summary,
+            "evidence_state": _clip(candidate.get("evidence_state"), 32),
+            "evidence_kind": _clip(candidate.get("evidence_kind"), 64),
+            "policy_priority_rank": int(candidate.get("policy_priority_rank", 0)),
+            "verifier": dict(candidate.get("verifier", {})),
+        })
+    payload_questions: dict[str, Any] = {}
+    for index, question in enumerate(questions):
+        if question.get("kind") != "noul":
+            raise JevAdapterError("Verification Reflex supports Noul questions only")
+        instructions = str(question.get("instructions", ""))
+        expected_path = f"`candidates[{index}]`"
+        if expected_path not in instructions:
+            raise JevAdapterError("Verification question must reference its exact candidate path")
+        payload_questions[str(question["id"])] = {
+            "type": "noul",
+            "instructions": instructions,
+            "criteria": {"true": question.get("true"), "false": question.get("false")},
+        }
+    return {"model": model, "state": state, "questions": payload_questions}
+
+
 def build_jev_payload(
     request: Mapping[str, Any],
     questions: tuple[dict[str, Any], ...],
@@ -561,6 +621,8 @@ def build_jev_payload(
         return _build_context_payload(request, questions, model)
     if schema == RETRIEVAL_REQUEST_VERSION:
         return _build_retrieval_payload(request, questions, model)
+    if schema == VERIFICATION_REQUEST_VERSION:
+        return _build_verification_payload(request, questions, model)
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -853,6 +915,35 @@ def _to_retrieval_result(
     }
 
 
+def _to_verification_result(
+    raw: Mapping[str, Any],
+    request: Mapping[str, Any],
+    questions: tuple[dict[str, Any], ...],
+    model: str,
+    binding: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    answers_raw = raw.get("answers")
+    candidates = request.get("candidates")
+    if not isinstance(answers_raw, Mapping) or not isinstance(candidates, list):
+        raise JevAdapterError("TypeSafe Verification response is incomplete")
+    if len(questions) != len(candidates):
+        raise JevAdapterError("Verification question/candidate count mismatch")
+    answers: dict[str, Any] = {}
+    for index, candidate in enumerate(candidates):
+        candidate_id = candidate.get("candidate_id")
+        qid = str(questions[index]["id"])
+        item = answers_raw.get(qid)
+        if not isinstance(candidate_id, str) or not isinstance(item, Mapping):
+            raise JevAdapterError(f"missing Verification answer: {qid}")
+        answers[candidate_id] = _noul_answer(item)
+    return {
+        "schema_version": VERIFICATION_RESULT_VERSION,
+        "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
+        "question_set_sha256": _question_hash_for_request(request),
+        "answers": answers,
+    }
+
+
 def to_reflex_result(
     raw: Mapping[str, Any],
     request: Mapping[str, Any],
@@ -867,6 +958,8 @@ def to_reflex_result(
         return _to_context_result(raw, request, questions, model, binding)
     if schema == RETRIEVAL_REQUEST_VERSION:
         return _to_retrieval_result(raw, request, questions, model, binding)
+    if schema == VERIFICATION_REQUEST_VERSION:
+        return _to_verification_result(raw, request, questions, model, binding)
     raise JevAdapterError("unsupported Reflex request schema")
 
 

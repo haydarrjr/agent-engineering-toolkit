@@ -27,6 +27,7 @@ Load only the reference that owns the current decision:
 - [optional Reflex provider](references/reflex-provider.md) only when an external Reflex backend is explicitly configured or evaluated.
 - [execution layer](references/execution-layer.md) for abstract-route to host-native execution mapping.
 - [value-of-call and retrieval contracts](references/value-of-call.md) for concrete executable opportunities, deterministic semantic admission, metadata-first lazy retrieval, and conservative fallback.
+- [verification governor](references/verification-governor.md) for independent unresolved findings, bounded verifier budgets, one-batched Noul admission, exact selective dispatch, and ledger-protected final reports.
 - [model routing](references/model-routing.md) for compute tiers and escalation/de-escalation signals.
 - [Codex host adapter](references/host-codex.md) when Codex native subagents are available.
 - [Copilot/VS Code host adapter](references/host-copilot.md) when GitHub Copilot custom agents or VS Code subagents are available.
@@ -40,3 +41,10 @@ Issue #21 adds `margos_value.py` for deterministic value-of-call admission,
 materialization, and the executable counterfactual benchmark for forced
 counterfactual arms. `decide(..., shadow=True)` records a typed judgment while
 preserving the Policy fallback for first-stage domain calibration.
+
+Issue #24 keeps verification scheduling separate from route selection. Use
+`margos_verification.py` after cheap deterministic discovery and the local
+evidence/Policy floor. The optional semantic provider may select unresolved
+verifier work only after deterministic ValueOfCall admission; it never ranks findings or changes
+evidence state. The host must dispatch exactly the mandatory plus selected
+optional operation IDs, then bind readback/proof receipts into the ledger.

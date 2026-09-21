@@ -32,6 +32,8 @@ jobs:
         run: python scripts/validate_margos_handoff.py
       - name: MARGOS evaluation/privacy contract
         run: python scripts/validate_margos_evaluation.py
+      - name: MARGOS Verification Governor contract
+        run: python scripts/validate_margos_verification.py
       - name: Unit tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: MARGOS frozen routing benchmark
@@ -46,6 +48,8 @@ jobs:
         run: python scripts/benchmark_margos_jev_v3.py --mode fixture --min-routing-cases 10 --min-context-cases 10 --strict
       - name: MARGOS JEV v4 executable fixture benchmark
         run: python scripts/benchmark_margos_jev_v4.py --mode fixture --strict
+      - name: MARGOS Verification Governor fixture benchmark
+        run: python scripts/benchmark_margos_jev_verification.py --mode fixture --strict
       - name: Python harness self-test
         run: python skills/python-engineering-harness/scripts/self_test.py
       - name: Agent Plugin validation

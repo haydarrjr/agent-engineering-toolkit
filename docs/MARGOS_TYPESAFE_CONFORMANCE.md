@@ -85,3 +85,38 @@ cases, one batched request for independent same-state judgments, true
 dependency-only Stage 2, pre-retrieval loader/byte reduction, realized routing
 work avoidance, verification non-inferiority on a cold holdout, warm replay
 savings, and clean Policy-only fallback when the skill/provider is absent.
+
+## Verification Governor conformance
+
+Issue #24 uses a dedicated question family rather than the routing
+`question-set-v2`:
+
+- one same-state `Noul` per unresolved optional candidate, batched in one
+  System One request;
+- each instruction names its exact backticked `candidates[N]` path and defines
+  true/false as “verify in the next bounded batch” versus “safely defer”;
+- no generic routing Choice/Score, route-sufficiency question, or final finding
+  ranking is sent to Jev;
+- code owns Policy bands, capacity, cost/critical-path arithmetic, dispatch,
+  evidence transitions, and final ordering;
+- stale calibration, provider errors, missing evidence, and invalid answers
+  fail closed to the deterministic Policy-priority plan;
+- a verified candidate is rejected before remote projection and a mandatory
+  verifier is never optionalized.
+
+The portable contracts are:
+
+```text
+verification-candidate-v1
+verification-opportunity-v1
+verification-reflex-request-v1 / verification-reflex-result-v1
+verification-plan-v1 / verification-receipt-v1
+```
+
+The dedicated question and threshold hashes are carried in every Verification
+receipt. Thresholds are selected on calibration only and held fixed before the
+single disjoint holdout evaluation. `Noul` is consumed as a probability that a
+candidate should consume the next verification slot; it is not a truth label,
+severity score, or confidence substitute. This follows the current TypeSafe
+primitive guidance and the reranking pattern's requirement that comparable
+per-candidate judgments be composed by code.
