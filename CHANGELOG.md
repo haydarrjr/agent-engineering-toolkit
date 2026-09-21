@@ -2,6 +2,15 @@
 
 All notable project changes are documented here.
 
+## [1.4.0] - 2026-09-21
+
+### Issue #24 Verification Governor
+- Added provider-neutral Verification Candidate, Opportunity, Plan, Reflex, Receipt, and deterministic FindingLedger contracts.
+- Separated independent unresolved finding verification from substitutable route selection; verified findings cannot enter optional JEV ranking and mandatory verifiers cannot be skipped.
+- Added one-batched-Noul Jev integration with exact structured paths, privacy-bounded projections, stale-calibration/provider-error fallback, and exact host dispatch receipts.
+- Added forced A/B/C/D verification benchmark and strict CI gate with disjoint calibration/holdout partitions, downstream gold labels, critical-path economics, and explicit `JEV_RESEARCH_ONLY` promotion status.
+- Updated MARGOS architecture, evaluation, TypeSafe conformance, provenance, and ReThinking audit surfaces.
+
 ## [1.3.0] - 2026-09-21
 
 ### MARGOS JEV v3

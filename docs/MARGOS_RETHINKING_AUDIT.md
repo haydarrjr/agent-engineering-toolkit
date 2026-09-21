@@ -29,6 +29,8 @@ Authoritative guidance read for this audit:
 | `com.github.copilot/agents/*` | KEEP | Hidden `model: auto` leaf agents preserve host-owned execution and do not recursively invoke agents. |
 | `scripts/validate_*.py` | KEEP | Validators encode repository, host adapter, Context, handoff, evaluation/privacy, and reproducible-release boundaries; they do not claim installation or live behavior. |
 | `scripts/benchmark_*.py` | NARROW | Offline fixture benchmarks remain CI gates. Live JEV is isolated to the explicit Issue #18 driver; missing credentials still produce `NOT_RUN`, while the authorized run is recorded as separate evidence. |
+| `skills/margos/scripts/margos_verification.py` and `skills/margos/contracts/verification-*` | KEEP | Dedicated unresolved-finding scheduling contracts are provider-neutral, bounded, and progressively disclosed; they do not extend generic route-selection authority. |
+| `scripts/benchmark_margos_jev_verification.py` and its synthetic fixture | KEEP | The Issue #24 forced-arm benchmark owns downstream-gold metrics, partition isolation, exact dispatch receipts, and one-request enforcement. |
 | `scripts/benchmark_margos_jev_v3.py` | KEEP | Owns forced A/B/C/D arm selection, provenance, partition isolation, raw outcome metrics, runtime fingerprinting, and promotion status. |
 | `tests/*` and `tests/fixtures/*` | KEEP | Regression fixtures are synthetic/redacted and are not treated as live-model ground truth. |
 | release/provenance/privacy docs | KEEP | Required repository-specific release, lineage, privacy, and evidence boundaries cannot be inferred safely and remain explicit. |
@@ -38,9 +40,9 @@ Authoritative guidance read for this audit:
 
 ## Counts and gates
 
-The repository heuristic audit completed with `PASS` and no findings. The 20 manual classifications are: 16 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, 0 `REMOVE`, and 1 `UNVERIFIED`. The classification covers the requested instruction, MARGOS, manifest, adapter, validator, benchmark, test, provenance, and release surfaces. The portable plugin contract remains authoritative; Codex and Copilot catalogs are reconciled adapters.
+The repository heuristic audit completed with `PASS` and no findings. The 22 manual classifications are: 18 `KEEP`, 2 `NARROW`, 1 `RELOCATE`, 0 `REMOVE`, and 1 `UNVERIFIED`. The classification covers the requested instruction, MARGOS, manifest, adapter, validator, benchmark, test, provenance, and release surfaces. The portable plugin contract remains authoritative; Codex and Copilot catalogs are reconciled adapters.
 
-Local gates completed after implementation included the repository/host/context/handoff/evaluation validators, 96 repository tests, frozen routing/context/trace benchmarks, Agent Plugin and skill validators, both marketplace render checks, surface reconciliation, and reproducible packaging. The Issue #18 forced-arm fixture driver is deterministic and emits a runtime fingerprint. The corrected authorized live run requested `jev-latest`, observed `jev-1.13.0`, recorded one attempted provider error after bounded retries, and produced `JEV_NOT_PROMOTED`; the evidence and measured transport/staging/duplicate-request causes are recorded in `docs/MARGOS_JEV_INTEGRATION_POSTMORTEM.md` and the Issue #18 GitHub thread.
+Local gates completed after implementation included the repository/host/context/handoff/evaluation/Verification Governor validators, the focused Verification Governor and adapter tests, frozen routing/context/trace/Issue #24 benchmarks, Agent Plugin and skill validators, both marketplace render checks, surface reconciliation, and reproducible packaging. The Issue #24 fixture driver is deterministic and emits a runtime/contract fingerprint. Live promotion remains a separate authorized holdout gate and is not inferred from fixture evidence.
 
 ## ReThinking outcome
 

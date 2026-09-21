@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Verification Reflex Request v1",
+  "type": "object",
+  "required": ["schema_version", "task_objective", "candidates", "question_set_sha256", "threshold_policy_sha256", "projection_version", "calibration_binding_hash"],
+  "properties": {
+    "schema_version": {"const": "margos-verification-reflex-request/v1"},
+    "task_objective": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "candidates": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["candidate_id", "claim_summary", "evidence_state", "evidence_kind", "policy_priority_rank", "verifier"], "properties": {"candidate_id": {"type": "string"}, "claim_summary": {"type": "string", "maxLength": 600}, "evidence_state": {"enum": ["UNVERIFIED", "INCONCLUSIVE"]}, "evidence_kind": {"type": "string"}, "policy_priority_rank": {"type": "integer", "minimum": 0}, "verifier": {"type": "object"}}, "additionalProperties": true}},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "projection_version": {"const": "margos-jev-verification-projection/v1"},
+    "calibration_binding_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

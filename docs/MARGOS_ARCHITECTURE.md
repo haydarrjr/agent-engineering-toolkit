@@ -195,3 +195,43 @@ dependency. Current skill/doc bindings and the conformance checklist are in
 `docs/MARGOS_TYPESAFE_CONFORMANCE.md`; shadow mode records Jev judgments while
 Policy still controls execution. See `skills/margos/references/value-of-call.md`
 for the portable contract boundary.
+
+## Issue #24: Verification Governor
+
+Verification scheduling is a separate plane from route selection and final
+finding reporting:
+
+```text
+cheap deterministic discovery
+  -> FindingLedger + evidence/Policy floor
+  -> VerificationOpportunity (unresolved only)
+  -> deterministic VerificationValueOfCall
+  -> at most one batched Noul request
+  -> deterministic VerificationPlan
+  -> host dispatch of mandatory + selected optional verifier IDs
+  -> readback/proof validation
+  -> deterministic final report
+```
+
+`ExecutionOpportunity` remains the contract for interchangeable execution
+routes. `VerificationCandidate` represents an independent unresolved claim and
+binds a bounded remote-safe summary, evidence kind, claim/provenance hashes,
+Policy-owned priority, and an explicit verifier cost/capability vector.
+Verified findings never enter the optional JEV projection. Mandatory verifier
+work is selected before JEV and cannot be removed by a probability. JEV's one
+Noul per candidate means “run this verifier in the next bounded batch,” never
+truth, severity, evidence confidence, or final finding rank.
+
+| Contract | Owns | Does not own |
+| --- | --- | --- |
+| `ExecutionOpportunity` | Substitutable route candidates | Independent audit claims |
+| `RetrievalCandidate` | Metadata-only payload fetch choice | Final evidence truth |
+| `VerificationOpportunity` | Bounded verifier budget and selective dispatch admission | Policy priority or evidence state |
+| `VerificationPlan` | Mandatory/optional IDs selected by code | Host execution facts |
+| `FindingLedger` | Evidence state, proof/provenance readback, final deterministic order | JEV probabilities |
+
+The dedicated implementation is `skills/margos/scripts/margos_verification.py`.
+Provider failure, stale calibration, missing evidence, unavailable selective
+dispatch, and empty budgets use deterministic fallback. A host must prove that
+it can dispatch exactly the selected operation IDs; otherwise the Reflex call is
+skipped with `SKIP_HOST_CANNOT_EXPLOIT_RESULT`.

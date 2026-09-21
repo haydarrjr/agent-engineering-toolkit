@@ -6,7 +6,7 @@ class RepositoryContract(unittest.TestCase):
     def test_manifest_identity(self):
         p=json.loads((ROOT/'plugin.json').read_text())
         self.assertEqual(p['name'],'agent-engineering-toolkit')
-        self.assertEqual(p['version'],'1.3.1')
+        self.assertEqual(p['version'],'1.4.0')
         self.assertEqual(p['license'],'Apache-2.0')
 
     def test_five_skills(self):
@@ -42,7 +42,7 @@ class RepositoryContract(unittest.TestCase):
 
     def test_provenance_keeps_baseline_and_v11_source(self):
         p=json.loads((ROOT/'provenance/imports.json').read_text())
-        self.assertEqual(p['generated_for_release'],'1.3.1')
+        self.assertEqual(p['generated_for_release'],'1.4.0')
         commits=[x['commit'] for x in p['imports']]
         self.assertIn('d8f9f93171debac5f19347fc1a6af40738b6ceab',commits)
         self.assertIn('2346885855e074cdb52f543b5e466c4dfd3de307',commits)

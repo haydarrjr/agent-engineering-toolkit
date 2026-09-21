@@ -1,6 +1,7 @@
 {
   "schema_version": "margos-typesafe-design-provenance/v1",
   "captured_at": "2026-09-21",
+  "implementation_release": "1.4.0",
   "official_skill": {
     "repository": "typesafe-ai/skills",
     "path": "skills/typesafe-ai/SKILL.md",
@@ -16,10 +17,29 @@
     "https://docs.typesafe.ai/models.md",
     "https://docs.typesafe.ai/model-jaggedness/jev-1.13.md"
   ],
+  "docs_sha256": {
+    "https://docs.typesafe.ai/llms.txt": "9bb713532b8b5b836d48bf19733a6649525aff8353e22c5cbebf5524a498ff24",
+    "https://docs.typesafe.ai/primitives.md": "130d9136a2f01497e72920a6e8d96073056d86d838ca13b8a505e4adb87651f6",
+    "https://docs.typesafe.ai/confidence.md": "97dafe98b77979906a2ad456013dd85a70dcecd109d0644b096817d910997ea5",
+    "https://docs.typesafe.ai/api.md": "7ea1c82d9d16bd06e3d38885a5292548293f91e6d1ade4682c27398ced51a9e5",
+    "https://docs.typesafe.ai/models.md": "9d20bb3c90a0147532d0b20ddc4c64579391be7842e965543b27bad684eeb4d6",
+    "https://docs.typesafe.ai/model-jaggedness/jev-1.13.md": "e69329bd32e91ac08f0bd2681ceb4aacc34923b9190e29c15c8f75d8e22950e2",
+    "https://docs.typesafe.ai/cookbooks/rerank_typesafe.md": "85b8158a7cc00bef100bf07aa00a506e117e2979d38c3650b50e122c8e69f1df"
+  },
   "api_contract_version_if_exposed": "POST /v1/systemone",
   "requested_model_policy": "jev-latest resolved at benchmark time",
   "known_observed_response_model": "jev-1.13.0 from prior authorized live evidence; not asserted by fixture runs",
   "question_set_sha256": "runtime-derived from the checked-in routing/context contracts",
   "projection_sha256": "runtime-derived from the checked-in provider projection",
-  "calibration_rule": "Bind only to concrete response model plus question, threshold, projection, extractor, host-capability, cost-model, protocol, and corpus fingerprints. Stale or missing bindings fail closed for active optimization."
+  "calibration_rule": "Bind only to concrete response model plus question, threshold, projection, extractor, host-capability, cost-model, protocol, and corpus fingerprints. Stale or missing bindings fail closed for active optimization.",
+  "verification_governor": {
+    "question_contract": "skills/margos/contracts/verification-question-set-v1.json",
+    "threshold_contract": "skills/margos/contracts/verification-threshold-policy-v1.json",
+    "question_set_sha256": "52269af6368427db8570fe5ff8130fad06eabc21b48c16f838b6e72a329be6f9",
+    "threshold_policy_sha256": "54c3d9dee2262d20402ebc0e6535f388689ecf6ea27f2423e4e2d6d25d3261f3",
+    "projection_version": "margos-jev-verification-projection/v1",
+    "selection_semantics": "Noul probability that an unresolved candidate should consume the next bounded verification slot; never truth, severity, evidence confidence, or final finding rank.",
+    "production_request_limit": 1,
+    "promotion_status": "JEV_RESEARCH_ONLY"
+  }
 }

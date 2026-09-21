@@ -198,5 +198,41 @@ Live mode must resolve the available model list, use only the environment
 one frozen holdout report. Until that report is safe and net-positive after
 Jev overhead, `JEV_NOT_PROMOTED` and Policy-only remain the default.
 
+## Issue #24 Verification Governor benchmark
+
+`scripts/benchmark_margos_jev_verification.py` is a separate forced-arm
+benchmark. The system under test never chooses its own arm and all arms share
+the same opportunity, case state, contracts, gold outcomes, and provenance.
+
+| Arm | Execution | JEV effect | Replay |
+| --- | --- | --- | --- |
+| A | Policy baseline dispatches all optional verifiers | none | cold |
+| B | Same dispatch as A | one batched shadow request, ignored by execution | cold |
+| C | `VerificationValueOfCall` + one batched request + bounded plan | dispatches mandatory plus selected optional IDs only | cold |
+| D | Same as C | warm replay/cache evidence | warm |
+
+The frozen fixture contains a verified provenance defect plus unresolved
+upstream/deployment/adapter hypotheses. Gold outcomes are downstream verifier
+readbacks, not JEV output. Strict gates require protected and mandatory
+retention of 1.0, no hypothesis above a verified finding, at most one provider
+request per planning round, exact plan/dispatch equality, disjoint calibration
+and holdout partitions, and no raw payload projection.
+
+Run the provider-free gate with:
+
+```bash
+python scripts/validate_margos_verification.py
+python scripts/benchmark_margos_jev_verification.py --mode fixture --strict
+```
+
+The benchmark reports recall/retention, optional work selected/skipped/
+dispatched, p95 critical-path work, net wall savings, provider requests,
+cache state, and the runtime/contract fingerprint. Fixture runs are regression
+evidence only. Live operation must use only `TYPESAFE_API_KEY` from the
+environment, resolve `jev-latest` at run time, record the concrete response
+model, freeze calibration, and evaluate one cold disjoint holdout. Until that
+evidence passes quality, safety, and material end-to-end value gates, the
+status is `JEV_RESEARCH_ONLY` and Policy-only remains the default.
+
 The TypeSafe design-time checklist and current docs/skill provenance are
 maintained in `docs/MARGOS_TYPESAFE_CONFORMANCE.md`.

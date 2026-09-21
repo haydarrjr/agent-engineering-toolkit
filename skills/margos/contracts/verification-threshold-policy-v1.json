@@ -1,0 +1,12 @@
+{
+  "version": "margos-verification-thresholds/v1",
+  "selection": "CALIBRATION_SET_ONLY",
+  "noul_selection_threshold": 0.60,
+  "noul_abstain_below": 0.50,
+  "max_optional_candidates": 8,
+  "max_provider_requests_per_planning_round": 1,
+  "stale_calibration_action": "DETERMINISTIC_FALLBACK",
+  "provider_error_action": "DETERMINISTIC_FALLBACK",
+  "missing_evidence_action": "DETERMINISTIC_FALLBACK",
+  "notes": "Thresholds are frozen after calibration and evaluated once on a disjoint holdout. They do not change evidence state, policy priority, severity, or final report rank."
+}

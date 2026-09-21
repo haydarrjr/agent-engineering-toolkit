@@ -7,6 +7,7 @@ SCRIPTS=ROOT/'skills/margos/scripts'
 sys.path.insert(0,str(SCRIPTS))
 import margos_decide as core
 import margos_reflex_jev as jev
+import margos_verification as verification
 
 def state(**updates):
     value={
@@ -50,6 +51,34 @@ def fake_response(payload):
     return {'model':'jev-1.13.0','answers':answers,'usage':{'input_tokens':321,'output_tokens':42}}
 
 class JevAdapterTests(unittest.TestCase):
+    def test_verification_payload_is_one_batched_noul_request(self):
+        request = verification.build_verification_request(__import__('benchmark_margos_jev_verification').opportunity())
+        questions = verification.verification_questions(len(request['candidates']))
+        payload = jev.build_jev_payload(request, questions, 'jev-latest')
+        self.assertEqual(len(payload['questions']), len(request['candidates']))
+        self.assertTrue(all(item['type'] == 'noul' for item in payload['questions'].values()))
+        self.assertTrue(all(f'`candidates[{index}]`' in questions[index]['instructions'] for index in range(len(questions))))
+        self.assertNotIn('coordination_preference', json.dumps(payload))
+        self.assertNotIn('route_', json.dumps(payload))
+        self.assertNotIn('private-host', json.dumps(payload))
+
+    def test_verification_adapter_maps_candidate_answers_and_fingerprint(self):
+        request = verification.build_verification_request(__import__('benchmark_margos_jev_verification').opportunity())
+        questions = verification.verification_questions(len(request['candidates']))
+        calls = []
+        def transport(base, key, payload, timeout):
+            calls.append(payload)
+            return {'model': 'jev-1.13.0', 'answers': {question['id']: {'noul': 0.8 - index * 0.1} for index, question in enumerate(questions)}}
+        provider = jev.JevReflexProvider(api_key='test-key', model='jev-latest', transport=transport)
+        result = provider.evaluate(request, questions)
+        scores = verification.validate_verification_result(result, __import__('benchmark_margos_jev_verification').opportunity())
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(set(scores), {'upstream-contract', 'deployment-drift', 'adapter-capability'})
+        self.assertEqual(result['provider']['response_model'], 'jev-1.13.0')
+        self.assertEqual(result['provider']['projection_version'], verification.PROJECTION_VERSION)
+        self.assertEqual(result['question_set_sha256'], verification.question_set_sha256())
+        provider.close()
+
     def test_model_list_accepts_typesafe_name_shape(self):
         class Response:
             def __enter__(self):

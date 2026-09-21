@@ -1,0 +1,25 @@
+{
+  "version": "margos-verification-governor/v1",
+  "provenance": "SYNTHETIC",
+  "calibration_partition": ["calibration-001"],
+  "holdout_partition": ["holdout-001"],
+  "cases": [
+    {
+      "case_id": "holdout-001",
+      "objective": "audit a repository and close the highest-impact unresolved claims",
+      "verified_findings": ["verified-provenance-defect"],
+      "gold_outcomes": {
+        "upstream-contract": "VERIFIED",
+        "deployment-drift": "FALSIFIED",
+        "adapter-capability": "INCONCLUSIVE"
+      }
+    }
+  ],
+  "strict_gates": {
+    "protected_retention": 1.0,
+    "mandatory_retention": 1.0,
+    "max_hypothesis_above_verified": 0,
+    "max_provider_requests_per_round": 1,
+    "quality_noninferior_to_policy_baseline": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Verification Plan v1",
+  "type": "object",
+  "required": [
+    "schema_version", "opportunity_id", "mandatory_candidate_ids",
+    "selected_optional_candidate_ids", "skipped_optional_candidate_ids",
+    "fallback_used", "composer_version"
+  ],
+  "properties": {
+    "schema_version": {"const": "margos-verification-plan/v1"},
+    "opportunity_id": {"type": "string", "minLength": 1},
+    "mandatory_candidate_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "selected_optional_candidate_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "skipped_optional_candidate_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "fallback_used": {"type": "boolean"},
+    "fallback_reason": {"type": "string"},
+    "composer_version": {"type": "string", "minLength": 1},
+    "selection_scores": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}}
+  },
+  "additionalProperties": false
+}

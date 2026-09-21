@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Verification Opportunity v1",
+  "type": "object",
+  "required": [
+    "schema_version", "opportunity_id", "task_objective", "budget",
+    "mandatory_candidate_ids", "optional_candidates", "host_selective_dispatch_proof",
+    "critical_path_model_version", "jev_latency_budget_ms", "cost_model_version",
+    "cache_lookup_status", "calibration_binding_hash"
+  ],
+  "properties": {
+    "schema_version": {"const": "margos-verification-opportunity/v1"},
+    "opportunity_id": {"type": "string", "minLength": 1},
+    "task_objective": {"type": "string", "minLength": 1, "maxLength": 2000},
+    "budget": {
+      "type": "object",
+      "required": ["max_optional_candidates", "max_verification_cost_units", "max_wall_clock_ms"],
+      "properties": {
+        "max_optional_candidates": {"type": "integer", "minimum": 0},
+        "max_verification_cost_units": {"type": "number", "minimum": 0},
+        "max_wall_clock_ms": {"type": "number", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "mandatory_candidate_ids": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "optional_candidates": {"type": "array", "items": {"$ref": "verification-candidate-v1.schema.json"}},
+    "host_selective_dispatch_proof": {"type": "string", "minLength": 1},
+    "critical_path_model_version": {"type": "string", "minLength": 1},
+    "jev_latency_budget_ms": {"type": "number", "minimum": 0},
+    "cost_model_version": {"type": "string", "minLength": 1},
+    "cache_lookup_status": {"enum": ["MISS", "HIT", "NOT_CHECKED"]},
+    "calibration_binding_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "optimization_objective": {"enum": ["LATENCY", "COST", "LATENCY_AND_COST"]}
+  },
+  "additionalProperties": false
+}
