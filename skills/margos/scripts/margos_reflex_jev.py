@@ -449,7 +449,13 @@ def resolve_available_models(
         raise JevAdapterError("TypeSafe model-list response must contain an array")
     result = []
     for value in values:
-        model_id = value.get("id") if isinstance(value, Mapping) else value
+        if isinstance(value, Mapping):
+            # TypeSafe currently exposes model identifiers as ``name`` while
+            # OpenAI-compatible listings commonly use ``id``.  Accept both
+            # without weakening the explicit model/fingerprint checks below.
+            model_id = value.get("id") or value.get("name")
+        else:
+            model_id = value
         if isinstance(model_id, str) and model_id:
             result.append(model_id)
     return list(dict.fromkeys(result))

@@ -1,4 +1,5 @@
 import json, sys, unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -49,6 +50,28 @@ def fake_response(payload):
     return {'model':'jev-1.13.0','answers':answers,'usage':{'input_tokens':321,'output_tokens':42}}
 
 class JevAdapterTests(unittest.TestCase):
+    def test_model_list_accepts_typesafe_name_shape(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return json.dumps({
+                    'models': [
+                        {'name': 'jev-latest', 'description': 'latest'},
+                        {'name': 'jev-preview', 'description': 'preview'},
+                    ]
+                }).encode()
+
+        with patch.object(jev.urllib.request, 'urlopen', return_value=Response()):
+            self.assertEqual(
+                jev.resolve_available_models(api_key='test-key'),
+                ['jev-latest', 'jev-preview'],
+            )
+
     def test_projection_minimizes_host_and_constraint_identity(self):
         pre=core.policy_pre_evaluate(state())
         projected=jev.project_reflex_state(core.build_reflex_request(pre))
