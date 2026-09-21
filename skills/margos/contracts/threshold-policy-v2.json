@@ -5,6 +5,7 @@
   "ambiguity_escalation": 0.55,
   "verification_escalation": 0.55,
   "direct_escalation": 0.75,
+  "candidate_sufficiency": 0.70,
   "independent_critic": 0.75,
   "transfer_sufficient": 0.60
 }

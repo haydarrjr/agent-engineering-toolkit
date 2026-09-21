@@ -1,0 +1,25 @@
+{
+  "schema_version": "margos-typesafe-design-provenance/v1",
+  "captured_at": "2026-09-21",
+  "official_skill": {
+    "repository": "typesafe-ai/skills",
+    "path": "skills/typesafe-ai/SKILL.md",
+    "ref": "main",
+    "blob_sha": "0109513f9656917dc93cbc5ecddfca465a53ce66",
+    "runtime_dependency": false
+  },
+  "docs_pages_consulted": [
+    "https://docs.typesafe.ai/llms.txt",
+    "https://docs.typesafe.ai/primitives.md",
+    "https://docs.typesafe.ai/confidence.md",
+    "https://docs.typesafe.ai/api.md",
+    "https://docs.typesafe.ai/models.md",
+    "https://docs.typesafe.ai/model-jaggedness/jev-1.13.md"
+  ],
+  "api_contract_version_if_exposed": "POST /v1/systemone",
+  "requested_model_policy": "jev-latest resolved at benchmark time",
+  "known_observed_response_model": "jev-1.13.0 from prior authorized live evidence; not asserted by fixture runs",
+  "question_set_sha256": "runtime-derived from the checked-in routing/context contracts",
+  "projection_sha256": "runtime-derived from the checked-in provider projection",
+  "calibration_rule": "Bind only to concrete response model plus question, threshold, projection, extractor, host-capability, cost-model, protocol, and corpus fingerprints. Stale or missing bindings fail closed for active optimization."
+}

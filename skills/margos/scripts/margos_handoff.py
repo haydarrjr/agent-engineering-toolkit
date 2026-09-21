@@ -544,6 +544,88 @@ def build_child_handoff(
     return bundle, receipt, bound_route, parent_receipt
 
 
+def plan_child_context(
+    raw_context_state: Mapping[str, Any],
+    candidate_metadata: list[Mapping[str, Any]],
+    context_provider: routing_core.ReflexProvider | None = None,
+    *,
+    needed_threshold: float = 0.60,
+) -> dict[str, Any]:
+    """Plan child retrieval before payloads are loaded.
+
+    This is intentionally separate from ``build_child_handoff``: the legacy
+    API accepts materialized payloads for compatibility, while new hosts call
+    this planner first and hand only selected artifacts to the materializer.
+    """
+    from margos_retrieval import build_metadata_state, plan_context_retrieval
+
+    state = context_core.normalize_state(raw_context_state)
+    metadata_state = build_metadata_state(state["task"], candidate_metadata)
+    return plan_context_retrieval(
+        metadata_state,
+        context_provider,
+        needed_threshold=needed_threshold,
+    )
+
+
+def build_child_handoff_from_retrieval_plan(
+    route_receipt: Mapping[str, Any],
+    raw_context_state: Mapping[str, Any],
+    retrieval_plan: Mapping[str, Any],
+    materialized: Mapping[str, Any],
+    child_contract: Mapping[str, Any],
+    context_provider: routing_core.ReflexProvider | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Materialize only the planned IDs, then use the canonical handoff path."""
+    artifacts = materialized.get("artifacts", {})
+    if not isinstance(artifacts, Mapping):
+        raise ValueError("materialized retrieval result must contain artifacts")
+    raw_state = copy.deepcopy(dict(raw_context_state))
+    items = raw_state.get("items")
+    if not isinstance(items, list):
+        raise ValueError("raw context state must contain items")
+    selected = set(str(item_id) for item_id in retrieval_plan.get("selected_ids", []))
+    payloads: dict[str, str] = {}
+    retained_items: list[dict[str, Any]] = []
+    for raw_item in items:
+        item_id = str(raw_item.get("item_id", ""))
+        if item_id not in selected:
+            continue
+        artifact = artifacts.get(item_id)
+        if not isinstance(artifact, Mapping):
+            raise ValueError(f"retrieval plan selected {item_id} but it was not materialized")
+        content = artifact.get("content")
+        digest = artifact.get("content_sha256")
+        if not isinstance(content, str) or not isinstance(digest, str):
+            raise ValueError(f"invalid payload artifact for {item_id}")
+        if _hash_text(content) != digest:
+            raise ValueError(f"payload artifact hash mismatch for {item_id}")
+        expected = raw_item.get("content_sha256")
+        if expected is not None and expected != digest:
+            raise ValueError(f"retrieval payload hash does not match ContextItem for {item_id}")
+        item = copy.deepcopy(raw_item)
+        item["content_sha256"] = digest
+        item["size"] = {
+            "chars": len(content),
+            "tokens_estimated": max(1, len(content) // 4),
+        }
+        retained_items.append(item)
+        payloads[item_id] = content
+    raw_state["items"] = retained_items
+    bundle, receipt, bound_route, parent_receipt = build_child_handoff(
+        route_receipt,
+        raw_state,
+        payloads,
+        child_contract,
+        context_provider,
+    )
+    receipt["retrieval_plan_sha256"] = _hash_json(retrieval_plan)
+    receipt["retrieval_telemetry"] = copy.deepcopy(materialized.get("telemetry", {}))
+    parent_receipt["retrieval_plan_sha256"] = _hash_json(retrieval_plan)
+    parent_receipt["retrieval_telemetry"] = copy.deepcopy(materialized.get("telemetry", {}))
+    return bundle, receipt, bound_route, parent_receipt
+
+
 def bind_route_context(
     route_receipt: Mapping[str, Any],
     child_context_receipt: Mapping[str, Any],

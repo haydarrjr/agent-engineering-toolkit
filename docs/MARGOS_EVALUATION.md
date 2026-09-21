@@ -164,3 +164,39 @@ The four arms are assigned by `scripts/benchmark_margos_jev_v3.py`, not by the s
 The live command requires at least 300 routing and 300 context cases, resolves `/v1/models`, requests `jev-latest` by default, records the concrete response model, and returns exactly one promotion status. Without `TYPESAFE_API_KEY`, it returns `live_status=NOT_RUN` and `JEV_NOT_PROMOTED` and must not be merged. Smaller fixture invocations are local smoke tests only. `JEV_PROMOTED_FOR_FROZEN_SUITE` additionally requires end-to-end latency non-regression and a material compute or context benefit; safety/non-inferiority alone is insufficient. A model, question, threshold, projection, extractor, corpus, or benchmark-protocol change requires a new calibration/promotion run.
 
 The historical Issue #18 run on source `b78c26a` requested `jev-latest` and observed response model `jev-1.13.0`, but its promotion result is superseded by the root-cause audit in `docs/MARGOS_JEV_INTEGRATION_POSTMORTEM.md`. The old fixture provider copied fixture answers into JEV responses, the old metric equated route-label equality with verified success, and admission still called JEV for Policy-forced Frontier cases. The corrected benchmark forbids those shortcuts, requires end-to-end efficiency evidence, and keeps JEV research-only until a fresh authorized live run passes those gates. Policy-only remains the safe default whenever admission skips, the host cannot exploit the result, the provider is disabled/unavailable, a budget applies, or final Policy veto rejects the proposal.
+
+## Issue #21 executable benchmark v4
+
+`scripts/benchmark_margos_jev_v4.py` compares forced arms over identical case
+state and contracts. The system under test never selects the arm.
+
+| Arm | Execution path | JEV mode | Replay |
+|---|---|---|---|
+| A | Policy-only executable fallback | none | cold |
+| B | Policy + ValueOfCall + routing | one batched routing request when admitted | cold |
+| C | B + metadata-first retrieval planning | one metadata request when admitted | cold |
+| D | C with session memoization/singleflight | same contracts | warm replay |
+
+Calibration and holdout cases are unique by canonical state hash and disjoint;
+thresholds are frozen before the holdout is evaluated once. Provenance remains
+separate for `SYNTHETIC`, `REDACTED_REAL_CODEX`, and
+`DERIVED_COUNTERFACTUAL`. Gold labels come from downstream host/loader
+verification receipts, never from Jev output or the selected route label.
+
+The v4 report includes p50/p95 end-to-end latency, Jev requests and retries,
+cache/coalescing telemetry, actual expensive operations, selected/fetched
+items and bytes, stage counts, raw-payload projection counts, Policy violations,
+and a runtime fingerprint containing contract hashes and model identity. The
+offline fixture gate is:
+
+```text
+python scripts/benchmark_margos_jev_v4.py --mode fixture --strict
+```
+
+Live mode must resolve the available model list, use only the environment
+`TYPESAFE_API_KEY`, bind thresholds to the concrete response model, and produce
+one frozen holdout report. Until that report is safe and net-positive after
+Jev overhead, `JEV_NOT_PROMOTED` and Policy-only remain the default.
+
+The TypeSafe design-time checklist and current docs/skill provenance are
+maintained in `docs/MARGOS_TYPESAFE_CONFORMANCE.md`.

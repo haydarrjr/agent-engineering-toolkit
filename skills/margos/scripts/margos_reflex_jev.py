@@ -10,9 +10,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import copy
+import http.client
+import threading
+import time
+import urllib.parse
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping
 
 import margos_decide as core
@@ -22,10 +27,13 @@ DEFAULT_MODEL = "jev-latest"
 PINNED_MODEL = "jev-1.13.0"
 CONTEXT_REQUEST_VERSION = "margos-context-reflex-request/v2"
 CONTEXT_RESULT_VERSION = "margos-context-reflex-result/v2"
+RETRIEVAL_REQUEST_VERSION = "margos-retrieval-reflex-request/v1"
+RETRIEVAL_RESULT_VERSION = "margos-retrieval-reflex-result/v1"
 ROUTING_PROJECTION_VERSION = "margos-jev-routing-projection/v2"
 CONTEXT_PROJECTION_VERSION = "margos-jev-context-projection/v3"
 CALIBRATION_BINDING_VERSION = "margos-jev-calibration/v2"
 Transport = Callable[[str, str, Mapping[str, Any], float], Mapping[str, Any]]
+RUNTIME_RECEIPT_VERSION = "margos-jev-runtime-receipt/v1"
 
 
 def _environment_api_key() -> str:
@@ -62,6 +70,79 @@ class JevAdapterError(ValueError):
     pass
 
 
+@dataclass
+class JevRuntime:
+    """Session-scoped transport/runtime with pooled HTTPS and request telemetry."""
+
+    base_url: str
+    api_key: str
+    transport: Transport | None = None
+    _connection: http.client.HTTPSConnection | None = field(default=None, init=False, repr=False)
+    _connection_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+
+    def _pooled_request(self, payload: Mapping[str, Any], timeout: float) -> tuple[Mapping[str, Any], float]:
+        parsed = urllib.parse.urlparse(self.base_url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise JevAdapterError("TypeSafe base URL must use HTTPS")
+        path = (parsed.path.rstrip("/") or "") + "/v1/systemone"
+        started = time.perf_counter()
+        with self._connection_lock:
+            try:
+                if self._connection is None:
+                    self._connection = http.client.HTTPSConnection(
+                        parsed.hostname,
+                        parsed.port or 443,
+                        timeout=timeout,
+                    )
+                self._connection.timeout = timeout
+                self._connection.request(
+                    "POST",
+                    path,
+                    body=json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8"),
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                        "User-Agent": "agent-engineering-toolkit/margos-vnext",
+                        "Connection": "keep-alive",
+                    },
+                )
+                response = self._connection.getresponse()
+                data = response.read()
+                if response.status >= 400:
+                    raise JevAdapterError(f"TypeSafe HTTP {response.status}")
+                decoded = json.loads(data.decode("utf-8"))
+            except JevAdapterError:
+                if self._connection is not None:
+                    self._connection.close()
+                    self._connection = None
+                raise
+            except (OSError, http.client.HTTPException) as exc:
+                if self._connection is not None:
+                    self._connection.close()
+                    self._connection = None
+                raise JevAdapterError(f"TypeSafe pooled transport error: {type(exc).__name__}") from None
+            except json.JSONDecodeError:
+                raise JevAdapterError("TypeSafe returned invalid JSON") from None
+        if not isinstance(decoded, Mapping):
+            raise JevAdapterError("TypeSafe response must be an object")
+        return decoded, (time.perf_counter() - started) * 1000.0
+
+    def request(self, payload: Mapping[str, Any], timeout: float) -> tuple[Mapping[str, Any], float]:
+        started = time.perf_counter()
+        if self.transport is not None:
+            decoded = self.transport(self.base_url, self.api_key, payload, timeout)
+            if not isinstance(decoded, Mapping):
+                raise JevAdapterError("TypeSafe response must be an object")
+            return decoded, (time.perf_counter() - started) * 1000.0
+        return self._pooled_request(payload, timeout)
+
+    def close(self) -> None:
+        with self._connection_lock:
+            if self._connection is not None:
+                self._connection.close()
+                self._connection = None
+
+
 def _clip(value: Any, limit: int = 6000) -> str:
     text = str(value or "")
     return text if len(text) <= limit else text[:limit]
@@ -80,6 +161,8 @@ def _projection_version(request: Mapping[str, Any]) -> str:
         return CONTEXT_PROJECTION_VERSION
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
         return ROUTING_PROJECTION_VERSION
+    if request.get("schema_version") == RETRIEVAL_REQUEST_VERSION:
+        return "margos-jev-retrieval-projection/v1"
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -89,6 +172,10 @@ def _threshold_hash_for_request(request: Mapping[str, Any]) -> str:
         return value
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
         return core.threshold_policy_sha256()
+    if request.get("schema_version") == RETRIEVAL_REQUEST_VERSION:
+        value = request.get("threshold_policy_sha256")
+        if isinstance(value, str) and len(value) == 64:
+            return value
     raise JevAdapterError("Reflex request missing threshold-policy hash")
 
 
@@ -127,7 +214,7 @@ def _calibration_metadata(
 
 
 def _question_hash_for_request(request: Mapping[str, Any]) -> str:
-    if request.get("schema_version") == CONTEXT_REQUEST_VERSION:
+    if request.get("schema_version") in {CONTEXT_REQUEST_VERSION, RETRIEVAL_REQUEST_VERSION}:
         value = request.get("question_set_sha256")
         if not isinstance(value, str):
             raise JevAdapterError("Context Reflex request missing question-set hash")
@@ -140,6 +227,8 @@ def _result_version_for_request(request: Mapping[str, Any]) -> str:
         return CONTEXT_RESULT_VERSION
     if request.get("schema_version") == core.REFLEX_REQUEST_VERSION:
         return core.REFLEX_RESULT_VERSION
+    if request.get("schema_version") == RETRIEVAL_REQUEST_VERSION:
+        return RETRIEVAL_RESULT_VERSION
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -154,7 +243,7 @@ def project_reflex_state(request: Mapping[str, Any]) -> dict[str, Any]:
     task = state["task"]
     host = state["host"]
     auth = state["authority"]
-    return {
+    projected = {
         "task": {
             "objective": _clip(task.get("objective")),
             "task_kind": _clip(task.get("task_kind"), 256),
@@ -191,6 +280,29 @@ def project_reflex_state(request: Mapping[str, Any]) -> dict[str, Any]:
             "compute": list(admissible.get("compute", [])),
         },
     }
+    opportunity = request.get("execution_opportunity") or state.get("execution_opportunity")
+    if isinstance(opportunity, Mapping):
+        projected["execution_opportunity"] = {
+            "opportunity_id": _clip(opportunity.get("opportunity_id"), 128),
+            "fallback_operation_id": _clip(opportunity.get("fallback_operation_id"), 128),
+            "critical_path": bool(opportunity.get("critical_path")),
+            "host_can_exploit_result": bool(opportunity.get("host_can_exploit_result")),
+            "jev_latency_budget_ms": float(opportunity.get("jev_latency_budget_ms", 0.0)),
+            "cost_model_version": _clip(opportunity.get("cost_model_version"), 64),
+            "candidates": [
+                {
+                    "operation_id": _clip(candidate.get("operation_id"), 128),
+                    "coordination": _clip(candidate.get("coordination"), 32),
+                    "compute": _clip(candidate.get("compute"), 64),
+                    "role": _clip(candidate.get("role"), 64),
+                    "host_capability_proof": _clip(candidate.get("host_capability_proof"), 128),
+                    "cost": dict(candidate.get("cost", {})),
+                }
+                for candidate in opportunity.get("candidates", [])
+                if isinstance(candidate, Mapping)
+            ],
+        }
+    return projected
 
 
 def project_context_reflex_state(
@@ -270,6 +382,43 @@ def project_context_reflex_state(
     return projected, mapping
 
 
+def project_retrieval_state(request: Mapping[str, Any]) -> tuple[dict[str, Any], list[tuple[str, str]]]:
+    """Project metadata-only retrieval candidates; payload text is not accepted."""
+    if request.get("schema_version") != RETRIEVAL_REQUEST_VERSION:
+        raise JevAdapterError("unsupported retrieval Reflex request schema")
+    task = request.get("task")
+    candidates = request.get("candidates")
+    if not isinstance(task, Mapping) or not isinstance(candidates, list):
+        raise JevAdapterError("invalid retrieval Reflex request")
+    projected = {
+        "task": {"objective": _clip(task.get("objective"), 3000), "verification_obligation": _clip(task.get("verification_obligation"), 2000)},
+        "candidates": [],
+    }
+    mapping: list[tuple[str, str]] = []
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, Mapping):
+            raise JevAdapterError("invalid retrieval candidate")
+        candidate_id = candidate.get("candidate_id")
+        if not isinstance(candidate_id, str) or not candidate_id:
+            raise JevAdapterError("retrieval candidate missing candidate_id")
+        if "content" in candidate or "payload" in candidate:
+            raise JevAdapterError("raw payload is forbidden in retrieval projection")
+        key = f"c{index:03d}"
+        mapping.append((key, candidate_id))
+        projected["candidates"].append({
+            "candidate_key": key,
+            "kind": _clip(candidate.get("kind"), 128),
+            "source": dict(candidate.get("source", {})),
+            "estimated_size": dict(candidate.get("estimated_size", {})),
+            "estimated_fetch_latency_ms": float(candidate.get("estimated_fetch_latency_ms", 0.0)),
+            "fetch_cost_class": _clip(candidate.get("fetch_cost_class"), 64),
+            "cache_locality": _clip(candidate.get("cache_locality"), 32),
+            "mandatory_by_policy": bool(candidate.get("mandatory_by_policy")),
+            "replay": dict(candidate.get("replay", {})),
+        })
+    return projected, mapping
+
+
 def _choice_question(
     question: Mapping[str, Any], admissible: list[str]
 ) -> dict[str, Any] | None:
@@ -325,6 +474,22 @@ def _build_routing_payload(
             raise JevAdapterError(
                 f"unsupported question kind: {question['kind']}"
             )
+    opportunity = state.get("execution_opportunity")
+    if isinstance(opportunity, Mapping):
+        for candidate in opportunity.get("candidates", []):
+            if not isinstance(candidate, Mapping):
+                continue
+            operation_id = str(candidate.get("operation_id", ""))
+            if not operation_id:
+                continue
+            payload_questions[f"route_{operation_id}_sufficient"] = {
+                "type": "noul",
+                "instructions": f"Can the executable operation `{operation_id}` close `task.verification_obligation` with the declared evidence and host capability proof?",
+                "criteria": {
+                    "true": "The concrete operation is semantically sufficient to close the obligation.",
+                    "false": "The concrete operation is not sufficient or would leave verification open.",
+                },
+            }
     return {"model": model, "state": state, "questions": payload_questions}
 
 
@@ -360,6 +525,30 @@ def _build_context_payload(
     return {"model": model, "state": state, "questions": payload_questions}
 
 
+def _build_retrieval_payload(
+    request: Mapping[str, Any],
+    questions: tuple[dict[str, Any], ...],
+    model: str,
+) -> dict[str, Any]:
+    state, mapping = project_retrieval_state(request)
+    payload_questions = {}
+    for candidate_key, _ in mapping:
+        candidate_path = f"candidates[{int(candidate_key[1:])}]"
+        for question in questions:
+            if question.get("kind") != "noul":
+                raise JevAdapterError("retrieval Reflex supports Noul questions only")
+            qid = str(question["id"])
+            payload_questions[f"{candidate_key}_{qid}"] = {
+                "type": "noul",
+                "instructions": f"Evaluate `{candidate_path}` against `task`: determine whether this candidate is needed for the next obligation.",
+                "criteria": {
+                    "true": "The metadata indicates the candidate is needed to close or verify the declared obligation.",
+                    "false": "The candidate is not needed; omitting it is safe under the metadata and Policy floor.",
+                },
+            }
+    return {"model": model, "state": state, "questions": payload_questions}
+
+
 def build_jev_payload(
     request: Mapping[str, Any],
     questions: tuple[dict[str, Any], ...],
@@ -370,6 +559,8 @@ def build_jev_payload(
         return _build_routing_payload(request, questions, model)
     if schema == CONTEXT_REQUEST_VERSION:
         return _build_context_payload(request, questions, model)
+    if schema == RETRIEVAL_REQUEST_VERSION:
+        return _build_retrieval_payload(request, questions, model)
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -587,6 +778,16 @@ def _to_routing_result(
             if not isinstance(item, Mapping):
                 raise JevAdapterError(f"missing Jev answer: {qid}")
             answers[qid] = _noul_answer(item)
+    projected_state = project_reflex_state(request)
+    opportunity = projected_state.get("execution_opportunity")
+    if isinstance(opportunity, Mapping):
+        for candidate in opportunity.get("candidates", []):
+            operation_id = str(candidate.get("operation_id", ""))
+            key = f"route_{operation_id}_sufficient"
+            item = answers_raw.get(key)
+            if not isinstance(item, Mapping):
+                raise JevAdapterError(f"missing Jev answer: {key}")
+            answers[key] = _noul_answer(item)
     return {
         "schema_version": core.REFLEX_RESULT_VERSION,
         "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
@@ -625,6 +826,33 @@ def _to_context_result(
     }
 
 
+def _to_retrieval_result(
+    raw: Mapping[str, Any],
+    request: Mapping[str, Any],
+    questions: tuple[dict[str, Any], ...],
+    model: str,
+    binding: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    answers_raw = raw.get("answers")
+    if not isinstance(answers_raw, Mapping):
+        raise JevAdapterError("TypeSafe response missing answers")
+    _, mapping = project_retrieval_state(request)
+    answers: dict[str, Any] = {}
+    for candidate_key, candidate_id in mapping:
+        answers[candidate_id] = {}
+        for question in questions:
+            raw_answer = answers_raw.get(f"{candidate_key}_{question['id']}")
+            if not isinstance(raw_answer, Mapping):
+                raise JevAdapterError(f"missing Jev retrieval answer: {candidate_key}_{question['id']}")
+            answers[candidate_id][question["id"]] = _noul_answer(raw_answer)
+    return {
+        "schema_version": RETRIEVAL_RESULT_VERSION,
+        "provider": _provider_meta(raw, request, model, binding, network_request_count=1),
+        "question_set_sha256": _question_hash_for_request(request),
+        "answers": answers,
+    }
+
+
 def to_reflex_result(
     raw: Mapping[str, Any],
     request: Mapping[str, Any],
@@ -637,6 +865,8 @@ def to_reflex_result(
         return _to_routing_result(raw, request, questions, model, binding)
     if schema == CONTEXT_REQUEST_VERSION:
         return _to_context_result(raw, request, questions, model, binding)
+    if schema == RETRIEVAL_REQUEST_VERSION:
+        return _to_retrieval_result(raw, request, questions, model, binding)
     raise JevAdapterError("unsupported Reflex request schema")
 
 
@@ -668,6 +898,83 @@ class JevReflexProvider:
     max_attempts: int = 3
     transport: Transport | None = None
     calibration_binding: Mapping[str, Any] | None = None
+    runtime: JevRuntime | None = field(default=None, init=False, repr=False)
+    _cache: dict[str, Mapping[str, Any]] = field(default_factory=dict, init=False, repr=False)
+    _inflight: dict[str, threading.Event] = field(default_factory=dict, init=False, repr=False)
+    _cache_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+
+    @property
+    def value_model_calibration_status(self) -> str:
+        if self.calibration_binding is None:
+            return "UNCALIBRATED"
+        if self.calibration_binding.get("evaluation_status") != "PASSED":
+            return "STALE"
+        if self.calibration_binding.get("model") not in {None, PINNED_MODEL}:
+            return "STALE"
+        return "CALIBRATED_FOR_FROZEN_SUITE"
+
+    def _get_runtime(self, base: str, key: str) -> JevRuntime:
+        if self.runtime is None or self.runtime.base_url != base or self.runtime.api_key != key:
+            if self.runtime is not None:
+                self.runtime.close()
+            self.runtime = JevRuntime(base, key, self.transport)
+        return self.runtime
+
+    def close(self) -> None:
+        if self.runtime is not None:
+            self.runtime.close()
+            self.runtime = None
+
+    def _cache_key(self, request: Mapping[str, Any], payload: Mapping[str, Any], model: str) -> str:
+        return _hash_json({
+            "provider": "typesafe-jev",
+            "concrete_or_requested_model": model,
+            "question_set_sha256": _question_hash_for_request(request),
+            "threshold_policy_sha256": _threshold_hash_for_request(request),
+            "projection_version": _projection_version(request),
+            "cost_model_version": request.get("cost_model_version", "unknown"),
+            "host_capability_mapping_version": request.get("host_capability_mapping_version", "unknown"),
+            "calibration_binding_sha256": _hash_json(self.calibration_binding) if self.calibration_binding is not None else None,
+            "payload": payload,
+        })
+
+    def _runtime_meta(
+        self,
+        result: Mapping[str, Any],
+        request: Mapping[str, Any],
+        model: str,
+        request_sha: str,
+        *,
+        cache_hit: bool,
+        coalesced: bool,
+        network_request_count: int,
+        latency_ms: float,
+        transport_latency_ms: float,
+    ) -> dict[str, Any]:
+        provider = dict(result.get("provider", {}))
+        provider.update({
+            "network_request_count": network_request_count,
+            "retry_count": int(provider.get("retry_count", max(0, network_request_count - 1)) or 0),
+            "cache_hit": cache_hit,
+            "coalesced": coalesced,
+            "runtime_receipt": {
+                "schema_version": RUNTIME_RECEIPT_VERSION,
+                "requested_model": model,
+                "response_model": provider.get("response_model"),
+                "question_set_sha256": _question_hash_for_request(request),
+                "threshold_policy_sha256": _threshold_hash_for_request(request),
+                "projection_version": _projection_version(request),
+                "request_sha256": request_sha,
+                "cache_hit": cache_hit,
+                "coalesced": coalesced,
+                "network_request_count": network_request_count,
+                "retry_count": int(provider.get("retry_count", 0) or 0),
+                "latency_ms": round(latency_ms, 3),
+                "transport_latency_ms": round(transport_latency_ms, 3),
+                "calibration_status": provider.get("calibration_status", "UNKNOWN"),
+            },
+        })
+        return provider
 
     def _runtime_key(self) -> str:
         return (
@@ -707,37 +1014,101 @@ class JevReflexProvider:
             }
 
         payload = build_jev_payload(request, questions, model)
-        attempts = max(1, int(self.max_attempts))
-        errors: list[str] = []
-        for attempt in range(1, attempts + 1):
-            try:
-                raw = (self.transport or _http_transport)(
-                    base, key, payload, float(self.timeout)
+        request_sha = _hash_json(payload)
+        with self._cache_lock:
+            cached = self._cache.get(request_sha)
+            if cached is not None:
+                result = copy.deepcopy(dict(cached))
+                result["provider"] = self._runtime_meta(
+                    result, request, model, request_sha, cache_hit=True, coalesced=False,
+                    network_request_count=0, latency_ms=0.0, transport_latency_ms=0.0,
                 )
-                result = to_reflex_result(
-                    raw, request, questions, model, self.calibration_binding
-                )
-                _validate_result_contract(result, questions)
-                provider = dict(result.get("provider", {}))
-                provider["network_request_count"] = attempt
-                if attempt > 1:
-                    provider["retry_count"] = attempt - 1
-                    provider["retry_errors"] = list(errors)
-                result["provider"] = provider
                 return result
-            except (JevAdapterError, KeyError, TypeError, ValueError) as exc:
-                errors.append(f"{type(exc).__name__}: {exc}")
-        return {
-            "schema_version": result_version,
-            "provider": {
-                "kind": "typesafe-jev",
-                "status": "ERROR",
-                "calibration_status": "UNKNOWN",
-                "network_request_count": attempts,
-                "retry_count": max(0, attempts - 1),
-                "retry_errors": list(errors[:-1]),
-                "error": errors[-1],
-            },
-            "question_set_sha256": question_hash,
-            "answers": {},
-        }
+            waiter = self._inflight.get(request_sha)
+            if waiter is None:
+                waiter = threading.Event()
+                self._inflight[request_sha] = waiter
+                leader = True
+            else:
+                leader = False
+        if not leader:
+            deadline = time.monotonic() + float(self.timeout)
+            waiter.wait(max(0.0, deadline - time.monotonic()))
+            with self._cache_lock:
+                cached = self._cache.get(request_sha)
+            if cached is not None:
+                result = copy.deepcopy(dict(cached))
+                result["provider"] = self._runtime_meta(
+                    result, request, model, request_sha, cache_hit=False, coalesced=True,
+                    network_request_count=0, latency_ms=0.0, transport_latency_ms=0.0,
+                )
+                return result
+            return {
+                "schema_version": result_version,
+                "provider": {"kind": "typesafe-jev", "status": "ERROR", "calibration_status": "UNKNOWN", "network_request_count": 0, "error": "singleflight deadline expired"},
+                "question_set_sha256": question_hash,
+                "answers": {},
+            }
+        started = time.perf_counter()
+        transport_latency = 0.0
+        try:
+            attempts = max(1, int(self.max_attempts))
+            errors: list[str] = []
+            runtime = self._get_runtime(base, key)
+            deadline_ms = request.get("jev_deadline_ms")
+            deadline = time.monotonic() + min(
+                float(self.timeout),
+                max(0.001, float(deadline_ms) / 1000.0) if isinstance(deadline_ms, (int, float)) else float(self.timeout),
+            )
+            for attempt in range(1, attempts + 1):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    errors.append("ValueOfCall deadline expired")
+                    break
+                try:
+                    raw, transport_ms = runtime.request(payload, remaining)
+                    transport_latency += transport_ms
+                    result = to_reflex_result(raw, request, questions, model, self.calibration_binding)
+                    _validate_result_contract(result, questions)
+                    provider = dict(result.get("provider", {}))
+                    provider["network_request_count"] = attempt
+                    if attempt > 1:
+                        provider["retry_count"] = attempt - 1
+                        provider["retry_errors"] = list(errors)
+                    provider.update({"request_sha256": request_sha})
+                    result["provider"] = provider
+                    result["provider"] = self._runtime_meta(
+                        result, request, model, request_sha, cache_hit=False, coalesced=False,
+                        network_request_count=attempt,
+                        latency_ms=(time.perf_counter() - started) * 1000.0,
+                        transport_latency_ms=transport_latency,
+                    )
+                    with self._cache_lock:
+                        self._cache[request_sha] = copy.deepcopy(result)
+                    return result
+                except (JevAdapterError, KeyError, TypeError, ValueError) as exc:
+                    errors.append(f"{type(exc).__name__}: {exc}")
+            return {
+                "schema_version": result_version,
+                "provider": {
+                    "kind": "typesafe-jev", "status": "ERROR", "calibration_status": "UNKNOWN",
+                    "network_request_count": len(errors), "retry_count": max(0, len(errors) - 1),
+                    "retry_errors": list(errors[:-1]), "error": errors[-1] if errors else "request deadline expired",
+                    "request_sha256": request_sha,
+                    "runtime_receipt": {
+                        "schema_version": RUNTIME_RECEIPT_VERSION, "requested_model": model, "response_model": None,
+                        "question_set_sha256": question_hash, "threshold_policy_sha256": _threshold_hash_for_request(request),
+                        "projection_version": _projection_version(request), "request_sha256": request_sha,
+                        "cache_hit": False, "coalesced": False, "network_request_count": len(errors),
+                        "retry_count": max(0, len(errors) - 1), "latency_ms": round((time.perf_counter() - started) * 1000.0, 3),
+                        "transport_latency_ms": round(transport_latency, 3), "calibration_status": "UNKNOWN",
+                    },
+                },
+                "question_set_sha256": question_hash,
+                "answers": {},
+            }
+        finally:
+            with self._cache_lock:
+                event = self._inflight.pop(request_sha, None)
+                if event is not None:
+                    event.set()

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS JEV Runtime Receipt v1",
+  "type": "object",
+  "required": ["schema_version", "requested_model", "response_model", "question_set_sha256", "threshold_policy_sha256", "projection_version", "request_sha256", "cache_hit", "coalesced", "network_request_count", "latency_ms"],
+  "properties": {
+    "schema_version": {"const": "margos-jev-runtime-receipt/v1"},
+    "requested_model": {"type": ["string", "null"]},
+    "response_model": {"type": ["string", "null"]},
+    "question_set_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "threshold_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "projection_version": {"type": "string"},
+    "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "cache_hit": {"type": "boolean"},
+    "coalesced": {"type": "boolean"},
+    "network_request_count": {"type": "integer", "minimum": 0},
+    "retry_count": {"type": "integer", "minimum": 0},
+    "latency_ms": {"type": "number", "minimum": 0},
+    "transport_latency_ms": {"type": "number", "minimum": 0},
+    "calibration_status": {"type": "string"}
+  },
+  "additionalProperties": true
+}

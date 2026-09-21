@@ -79,6 +79,14 @@ def build_fingerprint(
         "context_thresholds": ROOT / "skills/margos/contracts/context-threshold-policy-v2.json",
         "projection": ROOT / "skills/margos/scripts/margos_reflex_jev.py",
         "extractor": ROOT / "skills/margos/scripts/margos_evidence_capsule.py",
+        "value_of_call": ROOT / "skills/margos/scripts/margos_value.py",
+        "retrieval_planner": ROOT / "skills/margos/scripts/margos_retrieval.py",
+        "execution_opportunity_schema": ROOT / "skills/margos/schemas/execution-opportunity-v1.schema.json",
+        "value_of_call_schema": ROOT / "skills/margos/schemas/value-of-call-receipt-v1.schema.json",
+        "retrieval_candidate_schema": ROOT / "skills/margos/schemas/retrieval-candidate-v1.schema.json",
+        "retrieval_plan_schema": ROOT / "skills/margos/schemas/context-retrieval-plan-v1.schema.json",
+        "payload_artifact_schema": ROOT / "skills/margos/schemas/payload-artifact-v1.schema.json",
+        "runtime_receipt_schema": ROOT / "skills/margos/schemas/jev-runtime-receipt-v1.schema.json",
     }
     fingerprint = {
         "fingerprint_version": "margos-runtime-fingerprint/v1",

@@ -157,3 +157,41 @@ Routing no longer compares unrelated ambiguity, verification-risk, and direct-es
 Context Reflex is staged. Protected-context Policy runs locally first; an admitted metadata-only request can be followed by a bounded exact evidence request only when metadata is unresolved and the host explicitly permits remote capsules. Capsules carry exact excerpts, extractor/version, payload and excerpt hashes, provenance, and hard budgets. Secret screening suppresses the whole capsule before remote projection, and provider or confidence failures use the conservative local action.
 
 The forced-arm benchmark (`scripts/benchmark_margos_jev_v3.py`) assigns A/B/C/D outside the system under test, separates synthetic/redacted-real/derived-counterfactual provenance, freezes calibration before holdout evaluation, records raw downstream verification outcomes, and binds results to a runtime/source fingerprint. The benchmark is offline in CI; live promotion is a separate hard pre-merge gate. The current corrected authorized run requested `jev-latest`, observed `jev-1.13.0`, and returned `JEV_NOT_PROMOTED`: JEV added remote latency without reducing expensive compute or context. JEV remains an optional research path and does not bypass Policy, host capability checks, deterministic composition, final veto, or verification. The integration postmortem records the measured transport, staging, duplicate-request, and pre-retrieval-placement causes before any future promotion attempt.
+
+## Issue #21: value-of-call execution graph
+
+Issue #21 moves Jev to the only boundary where it can create value: after
+deterministic Policy has compiled a concrete executable opportunity, but before
+the host pays for the avoidable operation.
+
+```text
+observations
+  -> Policy
+  -> ExecutionOpportunity / RetrievalCandidate
+  -> deterministic ValueOfCall
+  -> one batched typed Jev request when material
+  -> deterministic cost-aware composition
+  -> final Policy veto
+  -> exactly one host-native operation
+  -> verification/readback and realized-work receipt
+```
+
+`margos_value.py` owns the economic gate and records the avoided operation,
+fallback, candidate cost vector, latency budget, host capability proof, cache
+state, and calibration state. Jev supplies semantic sufficiency probabilities;
+code chooses the cheapest Policy-admissible sufficient candidate. A missing
+operation, equivalent cost vector, unavailable host capability, stale
+calibration, cache hit, or insufficient value produces a zero-call skip.
+
+Context follows a separate metadata-first graph. `margos_retrieval.py` accepts
+only bounded candidate metadata, keeps mandatory/protected items in the local
+Policy floor, asks one batched metadata request when it can avoid meaningful
+fetch work, and loads selected IDs through a `PayloadLoader`. Hash validation
+and payload-to-ContextItem conversion happen only after loading. Raw payloads
+are rejected before remote projection.
+
+The official TypeSafe skill is a design-time peer, not a vendored runtime
+dependency. Current skill/doc bindings and the conformance checklist are in
+`docs/MARGOS_TYPESAFE_CONFORMANCE.md`; shadow mode records Jev judgments while
+Policy still controls execution. See `skills/margos/references/value-of-call.md`
+for the portable contract boundary.

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MARGOS Retrieval Candidate v1",
+  "type": "object",
+  "required": ["schema_version", "candidate_id", "kind", "source", "estimated_size", "fetch_cost_class", "mandatory_by_policy"],
+  "properties": {
+    "schema_version": {"const": "margos-retrieval-candidate/v1"},
+    "candidate_id": {"type": "string", "minLength": 1},
+    "kind": {"type": "string", "minLength": 1},
+    "source": {"type": "object", "required": ["tool", "locator"], "properties": {"tool": {"type": "string"}, "locator": {"type": "string"}, "content_version_if_known": {"type": ["string", "null"]}}, "additionalProperties": false},
+    "authority": {"type": "object"},
+    "evidence": {"type": "object"},
+    "estimated_size": {"type": "object", "required": ["bytes", "tokens"], "properties": {"bytes": {"type": "integer", "minimum": 0}, "tokens": {"type": "integer", "minimum": 0}, "chars": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+    "estimated_fetch_latency_ms": {"type": "number", "minimum": 0},
+    "fetch_cost_class": {"type": "string", "minLength": 1},
+    "cache_locality": {"enum": ["LOCAL", "WARM", "COLD", "UNKNOWN"]},
+    "mandatory_by_policy": {"type": "boolean"},
+    "replay": {"type": "object"}
+  },
+  "additionalProperties": true
+}

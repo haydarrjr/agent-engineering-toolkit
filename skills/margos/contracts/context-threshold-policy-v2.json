@@ -5,8 +5,10 @@
   "awareness_threshold": 0.60,
   "replay_risk_threshold": 0.38,
   "abstain_band": 0.08,
-  "max_items_per_batch": 8,
-  "max_projection_chars": 12000,
+  "max_items_per_batch": 64,
+  "max_request_tokens": 12000,
+  "max_batch_workers": 4,
+  "max_projection_chars": 60000,
   "max_semantic_capsule_chars": 512,
   "provider_failure_action": "KEEP_REF"
 }

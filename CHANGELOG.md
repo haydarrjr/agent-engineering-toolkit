@@ -18,6 +18,9 @@ All notable project changes are documented here.
 - Added a deterministic Policy compute floor for hard verification evidence and skip admission when JEV cannot materially change an executable route.
 - Removed fixture-oracle leakage from the forced benchmark, separated downstream host verification from route-contract matching, and added end-to-end efficiency/material-benefit promotion gates.
 - Superseded the historical `JEV_PROMOTED_FOR_FROZEN_SUITE` claim pending a fresh live run with the corrected protocol.
+- Implemented Issue #21 ValueOfCall admission over concrete executable operations, pooled session-scoped Jev transport, validated memoization/singleflight, metadata-first lazy retrieval, and bounded retrieval telemetry.
+- Added JEV v4 executable counterfactual benchmark arms with unique calibration/holdout partitions, warm replay, raw host/loader outcomes, and Policy-only default promotion gates.
+- Added official TypeSafe design-time conformance/freshness provenance and shadow-first rollout guidance without vendoring or making the skill a MARGOS runtime dependency.
 
 ## [1.2.0] - 2026-09-19
 

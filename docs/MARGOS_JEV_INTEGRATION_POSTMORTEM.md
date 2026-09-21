@@ -37,3 +37,27 @@ Hard verification evidence removes cheaper compute tiers from the admissible set
 The historical live run is retained as evidence of what the old protocol measured, not as a promotion claim. The corrected live run used the environment-only `TYPESAFE_API_KEY`, requested `jev-latest`, and recorded `jev-1.13.0`; it remains `JEV_NOT_PROMOTED` because no material downstream benefit was observed. The next implementation must make the comparison valid: reuse connections, avoid duplicate requests, admit JEV only when it can replace an expensive executable operation, and benchmark pre-retrieval selection against the actual expensive alternative.
 
 References: [TypeSafe primitives](https://docs.typesafe.ai/primitives), [TypeSafe models](https://docs.typesafe.ai/models), [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13), [Issue #18](https://github.com/haydarrjr/agent-engineering-toolkit/issues/18).
+
+## Issue #21 implementation boundary
+
+The corrective implementation is intentionally an execution-graph change, not
+only a faster adapter:
+
+- `margos_value.py` admits Jev only when a concrete avoidable operation and
+  material cost-vector delta are present.
+- `margos_reflex_jev.py` uses a session-scoped pooled HTTPS runtime, bounded
+  deadlines, validated cache entries, singleflight, concrete model telemetry,
+  and retrieval metadata projection.
+- `margos_retrieval.py` plans before payload loading and verifies hashes at the
+  lazy materialization boundary.
+- `margos_handoff.py` can build a child handoff from a retrieval plan without
+  forcing full payload materialization.
+- `benchmark_margos_jev_v4.py` executes the selected operation and records
+  realized host/loader outcomes; it does not infer savings from route labels.
+
+The official TypeSafe skill alignment is a separate design-time plane. The
+checked-in conformance checklist, freshness binding, and shadow-first rollout
+are documented in `docs/MARGOS_TYPESAFE_CONFORMANCE.md` and
+`provenance/typesafe-jev-design.json`. The skill cannot grant Policy or
+execution authority, and an unavailable skill/provider always falls back to
+Policy-only behavior.

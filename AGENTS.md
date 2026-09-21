@@ -8,6 +8,7 @@ Keep this repository a portable, skills-first Agent Plugins package.
 - `software-craft` owns cross-language repository engineering when no narrower owner applies.
 - `python-engineering-harness` owns Python repository work.
 - `margos`, `rethinking`, and `agent-plugins-author` are explicit-only.
+- When modifying TypeSafe/Jev questions, projections, calibration, migration, or benchmarks, use the optional official `typesafe-ai` design skill when installed, read the current targeted TypeSafe docs, and record the exact skill/doc provenance. The skill is design guidance only; it is not a MARGOS runtime dependency or authority source.
 - Keep MARGOS model/provider agnostic at its root. Host-specific model/subagent behavior belongs in MARGOS references or client adapters.
 - Preserve Apache-2.0 licensing, provenance records, and the public/private boundary.
 - Do not add credentials, tokens, private prompts, private tool output, private deployment topology, or user-specific environment paths.
