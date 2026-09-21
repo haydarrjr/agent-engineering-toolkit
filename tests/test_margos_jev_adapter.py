@@ -173,6 +173,30 @@ class JevAdapterTests(unittest.TestCase):
         self.assertEqual(receipt['provider']['status'],'ERROR')
         self.assertEqual(receipt['selected']['coordination'],'DIRECT')
 
+    def test_malformed_distribution_is_retried_and_telemetried(self):
+        calls = 0
+        def transport(base, key, payload, timeout):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                response = fake_response(payload)
+                response['answers']['verification_risk']['probabilities']['0'] = 0.99
+                return response
+            return fake_response(payload)
+
+        pre = core.policy_pre_evaluate(state())
+        provider = jev.JevReflexProvider(
+            api_key='test-key',
+            max_attempts=2,
+            transport=transport,
+        )
+        result = provider.evaluate(core.build_reflex_request(pre), core.QUESTION_SET)
+        self.assertEqual(calls, 2)
+        self.assertEqual(result['provider']['status'], 'AVAILABLE')
+        self.assertEqual(result['provider']['network_request_count'], 2)
+        self.assertEqual(result['provider']['retry_count'], 1)
+        self.assertIn('invalid distribution for verification_risk', result['provider']['retry_errors'][0])
+
     def test_reflex_assisted_decision_preserves_user_constraint(self):
         provider=jev.JevReflexProvider(api_key='test-key',transport=lambda b,k,p,t: fake_response(p))
         receipt=core.decide(state(),provider)

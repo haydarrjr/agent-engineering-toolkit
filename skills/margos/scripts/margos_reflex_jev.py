@@ -637,12 +637,32 @@ def to_reflex_result(
     raise JevAdapterError("unsupported Reflex request schema")
 
 
+def _validate_result_contract(result: Mapping[str, Any], questions: tuple[dict[str, Any], ...]) -> None:
+    """Reject malformed provider distributions before they reach composition."""
+    answers = result.get("answers")
+    if not isinstance(answers, Mapping):
+        raise JevAdapterError("TypeSafe response missing answers")
+    for question in questions:
+        if question["kind"] not in {"choice", "score"}:
+            continue
+        question_id = question["id"]
+        answer = answers.get(question_id)
+        options = question.get("choices") or question.get("levels") or []
+        probabilities = answer.get("probabilities") if isinstance(answer, Mapping) else None
+        if not isinstance(probabilities, Mapping) or set(probabilities) != set(options):
+            raise JevAdapterError(f"{question_id} probabilities must cover the closed set")
+        values = [float(probabilities[option]) for option in options]
+        if any(value < 0 or value > 1 for value in values) or abs(sum(values) - 1.0) > 1e-6:
+            raise JevAdapterError(f"invalid distribution for {question_id}")
+
+
 @dataclass
 class JevReflexProvider:
     api_key: str | None = None
     base_url: str | None = None
     model: str | None = None
     timeout: float = 15.0
+    max_attempts: int = 3
     transport: Transport | None = None
     calibration_binding: Mapping[str, Any] | None = None
 
@@ -683,26 +703,38 @@ class JevReflexProvider:
                 "answers": {},
             }
 
-        attempted_network = False
-        try:
-            payload = build_jev_payload(request, questions, model)
-            attempted_network = True
-            raw = (self.transport or _http_transport)(
-                base, key, payload, float(self.timeout)
-            )
-            return to_reflex_result(
-                raw, request, questions, model, self.calibration_binding
-            )
-        except (JevAdapterError, KeyError, TypeError, ValueError) as exc:
-            return {
-                "schema_version": result_version,
-                "provider": {
-                    "kind": "typesafe-jev",
-                    "status": "ERROR",
-                    "calibration_status": "UNKNOWN",
-                    "network_request_count": 1 if attempted_network else 0,
-                    "error": f"{type(exc).__name__}: {exc}",
-                },
-                "question_set_sha256": question_hash,
-                "answers": {},
-            }
+        payload = build_jev_payload(request, questions, model)
+        attempts = max(1, int(self.max_attempts))
+        errors: list[str] = []
+        for attempt in range(1, attempts + 1):
+            try:
+                raw = (self.transport or _http_transport)(
+                    base, key, payload, float(self.timeout)
+                )
+                result = to_reflex_result(
+                    raw, request, questions, model, self.calibration_binding
+                )
+                _validate_result_contract(result, questions)
+                provider = dict(result.get("provider", {}))
+                provider["network_request_count"] = attempt
+                if attempt > 1:
+                    provider["retry_count"] = attempt - 1
+                    provider["retry_errors"] = list(errors)
+                result["provider"] = provider
+                return result
+            except (JevAdapterError, KeyError, TypeError, ValueError) as exc:
+                errors.append(f"{type(exc).__name__}: {exc}")
+        return {
+            "schema_version": result_version,
+            "provider": {
+                "kind": "typesafe-jev",
+                "status": "ERROR",
+                "calibration_status": "UNKNOWN",
+                "network_request_count": attempts,
+                "retry_count": max(0, attempts - 1),
+                "retry_errors": list(errors[:-1]),
+                "error": errors[-1],
+            },
+            "question_set_sha256": question_hash,
+            "answers": {},
+        }
