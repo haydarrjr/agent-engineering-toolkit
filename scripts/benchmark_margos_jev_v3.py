@@ -238,13 +238,21 @@ def summarize(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
-def promotion_status(*, live: bool, model: str | None, safe: bool, non_inferior: bool) -> str:
-    """Apply the predeclared promotion gates without treating aliases as pinned."""
+def promotion_status(
+    *,
+    live: bool,
+    model: str | None,
+    response_models: list[str],
+    safe: bool,
+    non_inferior: bool,
+    provider_errors: int,
+) -> str:
+    """Apply promotion gates using the model that actually answered."""
     if not live:
         return "JEV_NOT_PROMOTED"
-    if not safe or not non_inferior:
+    if not safe or not non_inferior or provider_errors:
         return "JEV_NOT_PROMOTED"
-    if model != jev.PINNED_MODEL:
+    if model != jev.PINNED_MODEL and response_models != [jev.PINNED_MODEL]:
         return "JEV_RESEARCH_ONLY"
     return "JEV_PROMOTED_FOR_FROZEN_SUITE"
 
@@ -281,10 +289,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             }
         available = jev.resolve_available_models(api_key=api_key)
         requested = args.model
-        model = requested if requested else (jev.PINNED_MODEL if jev.PINNED_MODEL in available else None)
+        model = requested if requested else (jev.PINNED_MODEL if jev.PINNED_MODEL in available else jev.DEFAULT_MODEL)
         if not model:
             raise RuntimeError(f"pinned model {jev.PINNED_MODEL} is unavailable; explicit model required")
-        if model not in available:
+        if model not in available and model != jev.PINNED_MODEL:
             raise RuntimeError(f"requested model {model} is not present in the provider model list")
     else:
         model = args.model or "fixture-jev-v3"
@@ -344,17 +352,32 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         and report["arms"][arm]["context"]["verified_success_rate"] >= baseline["context"]["verified_success_rate"]
         for arm in ARMS[1:]
     )
+    experimental_rows = [
+        row
+        for arm in ARMS[1:]
+        for row in report["arms"][arm].get("routing_rows", []) + report["arms"][arm].get("context_rows", [])
+        if int(row.get("jev_request_count", 0) or 0) + int(row.get("context_request_count", 0) or 0) > 0
+    ]
+    response_models = sorted({row.get("response_model") for row in experimental_rows if row.get("response_model")})
+    provider_errors = sum(1 for row in experimental_rows if row.get("provider_status") != "AVAILABLE")
+    report["observed_response_models"] = response_models
+    report["provider_error_count"] = provider_errors
     report["promotion_status"] = promotion_status(
         live=live,
         model=model if live else None,
+        response_models=response_models,
         safe=safe,
         non_inferior=non_inferior,
+        provider_errors=provider_errors,
     )
     report["promotion_gates"] = {
         "safe": safe,
         "non_inferior": non_inferior,
         "pinned_model_required": True,
-        "pinned_model_used": model == jev.PINNED_MODEL if live else False,
+        "pinned_model_used": (
+            model == jev.PINNED_MODEL or response_models == [jev.PINNED_MODEL]
+        ) if live else False,
+        "provider_errors_zero": provider_errors == 0,
     }
     report["runtime_fingerprint"] = fingerprint.build_fingerprint(
         requested_model=args.model,

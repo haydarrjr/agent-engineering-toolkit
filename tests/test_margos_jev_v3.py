@@ -145,22 +145,28 @@ class JevV3ContractTests(unittest.TestCase):
         changed["source_sha"] = "different"
         self.assertIn("source_sha", fingerprint.fingerprint_mismatches(report["runtime_fingerprint"], changed))
 
-    def test_promotion_requires_pinned_model_and_live_gates(self):
+    def test_promotion_requires_pinned_observed_model_and_live_gates(self):
         self.assertEqual(
             benchmark.promotion_status(
-                live=True, model="jev-1.13.0", safe=True, non_inferior=True
+                live=True, model="jev-1.13.0", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0
             ),
             "JEV_PROMOTED_FOR_FROZEN_SUITE",
         )
         self.assertEqual(
             benchmark.promotion_status(
-                live=True, model="jev-latest", safe=True, non_inferior=True
+                live=True, model="jev-latest", response_models=["jev-1.13.0"], safe=True, non_inferior=True, provider_errors=0
+            ),
+            "JEV_PROMOTED_FOR_FROZEN_SUITE",
+        )
+        self.assertEqual(
+            benchmark.promotion_status(
+                live=True, model="jev-latest", response_models=["jev-1.14.0"], safe=True, non_inferior=True, provider_errors=0
             ),
             "JEV_RESEARCH_ONLY",
         )
         self.assertEqual(
             benchmark.promotion_status(
-                live=True, model="jev-1.13.0", safe=False, non_inferior=True
+                live=True, model="jev-1.13.0", response_models=["jev-1.13.0"], safe=False, non_inferior=True, provider_errors=0
             ),
             "JEV_NOT_PROMOTED",
         )

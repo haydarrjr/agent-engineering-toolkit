@@ -102,21 +102,22 @@ def _calibration_metadata(
     if binding is None:
         return meta
     meta["calibration_binding_sha256"] = _hash_json(binding)
+    response_model = raw.get("model")
+    effective_model = response_model if isinstance(response_model, str) else model
     required = {
         "version": CALIBRATION_BINDING_VERSION,
         "provider": "typesafe-jev",
-        "model": model,
+        "model": effective_model,
         "question_set_sha256": _question_hash_for_request(request),
         "threshold_policy_sha256": _threshold_hash_for_request(request),
         "projection_version": _projection_version(request),
         "evaluation_status": "PASSED",
     }
     corpus = binding.get("corpus_sha256")
-    pinned = model != DEFAULT_MODEL and "latest" not in model.lower()
-    response_model = raw.get("model")
+    pinned = effective_model == PINNED_MODEL
     matches = all(binding.get(k) == v for k, v in required.items())
     valid_corpus = isinstance(corpus, str) and len(corpus) == 64 and all(ch in "0123456789abcdef" for ch in corpus)
-    response_matches = not isinstance(response_model, str) or response_model == model
+    response_matches = not isinstance(response_model, str) or response_model == effective_model
     meta["calibration_status"] = (
         "CALIBRATED_FOR_FROZEN_SUITE"
         if pinned and matches and valid_corpus and response_matches

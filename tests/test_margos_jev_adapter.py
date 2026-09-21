@@ -129,6 +129,19 @@ class JevAdapterTests(unittest.TestCase):
         self.assertEqual(result['provider']['projection_version'],jev.ROUTING_PROJECTION_VERSION)
         self.assertIn('calibration_binding_sha256',result['provider'])
 
+    def test_alias_response_can_bind_to_versioned_pinned_model(self):
+        pre=core.policy_pre_evaluate(state())
+        binding=calibration_binding('jev-1.13.0')
+        provider=jev.JevReflexProvider(
+            api_key='test-key',
+            model='jev-latest',
+            calibration_binding=binding,
+            transport=lambda b,k,p,t: {**fake_response(p), 'model':'jev-1.13.0'},
+        )
+        result=provider.evaluate(core.build_reflex_request(pre),core.QUESTION_SET)
+        self.assertEqual(result['provider']['calibration_status'],'CALIBRATED_FOR_FROZEN_SUITE')
+        self.assertEqual(result['provider']['response_model'],'jev-1.13.0')
+
     def test_alias_or_changed_binding_is_stale(self):
         pre=core.policy_pre_evaluate(state())
         binding=calibration_binding('jev-latest')
